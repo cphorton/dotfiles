@@ -1,1 +1,5 @@
-require('lspconfig').omnisharp.setup{}
+require('lspconfig').omnisharp.setup{
+
+	cmd = { 'omnisharp' }
+
+}
