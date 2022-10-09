@@ -1,0 +1,5 @@
+require('options')
+require('mappings')
+require('packer-config')
+require('colourschemes-config.nightfox')
+require('nvim-tree-config')
