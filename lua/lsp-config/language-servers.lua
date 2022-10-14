@@ -37,6 +37,15 @@ end
 
 --local servers = { 'omnisharp'}
 
+local omniSharpCommand
+
+if vim.fn.has('win32') == 1 then
+  omniSharpCommand = { 'dotnet', 'C:\\Program Files\\Omnisharp\\omnisharp.dll', "--languageserver", "--hostpid", tostring(pid)}
+elseif vim.fn.has('linux') == 1 then
+  omniSharpCommand = { '/usr/bin/omnisharp', "--languageserver", "--hostpid", tostring(pid)}
+end
+
+
 -- Add additional capabilities supported by nvim-cmp
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').update_capabilities(capabilities)
@@ -46,7 +55,7 @@ local nvim_lsp = require('lspconfig').omnisharp.setup {
     vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   end,
   capabilities,
-  cmd = { 'dotnet', 'C:\\Program Files\\Omnisharp\\omnisharp.dll', "--languageserver", "--hostpid", tostring(pid)},
+  cmd = omniSharpCommand 
 }
 
 local lsp_flags = {
