@@ -8,9 +8,21 @@ vim.fn.sign_define('DapBreakpointRejected', { text='', texthl='TSError', line
 vim.fn.sign_define('DapLogPoint', { text='', texthl='TSFloat', linehl='DapLogPoint', numhl= 'DapLogPoint' })
 vim.fn.sign_define('DapStopped', { text='', texthl='TSCharacter', linehl='DapStopped', numhl= 'DapStopped' })
 
+
+local netcoredbgCommand
+
+if vim.fn.has('win32') == 1 then
+  netcoredbgCommand = 'c:\\Program Files\\netcoredbg\\netcoredbg.exe'
+elseif vim.fn.has('linux') == 1 then
+  netcoredbgCommand = '/usr/bin/netcoredbg'
+end
+
+
+
+
 dap.adapters.coreclr = {
   type = 'executable',
-  command = '/usr/bin/netcoredbg',
+  command = netcoredbgCommand,
   args = {'--interpreter=vscode'}
 }
 
