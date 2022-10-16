@@ -54,3 +54,25 @@ map('n', '<Space>bw', '<Cmd>BufferOrderByWindowNumber<CR>', opts)
 map('n', '<leader>ff', ':Telescope find_files<CR>', opts)
 map('n', '<leader>fg', ':Telescope live_grep<CR>', opts)
 map('n', '<leader>fr', ':Telescope lsp_references<CR>', opts)
+
+
+--Dotnet
+map('n', '<C-b>', ':lua vim.g.dotnet_build_project()<CR>', opts)
+
+
+--DAP
+
+map('n', '<F5>', ':DapContinue<CR>', opts)
+map('n', '<F10>', ':DapStepOver<CR>', opts)
+map('n', '<F11>', ':DapStepInto<CR>', opts)
+map('n', '<F12>', ':DapStepOut<CR>', opts)
+map('n', '<Leader>b', ':DapToggleBreakpoint<CR>', opts)
+map('n', '<Leader>B', ':lua require"dap".set_breakpoint(vim.fn.input("Breakpoint condition: "))<CR>', opts)
+map('n', '<Leader>lp', ':lua require"dap".set_breakpoint(nil, nil, vim.fn.input("Log point message: "))<CR>', opts)
+map('n', '<Leader>dr', ':lua require"dap".repl.open()<CR>', opts)
+map('n', '<Leader>dl', ':lua require"dap".run_last()<CR>', opts)
+
+
+
+
+

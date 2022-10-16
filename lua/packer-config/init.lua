@@ -13,5 +13,12 @@ return require('packer').startup(function()
         use 'saadparwaiz1/cmp_luasnip' -- Snippets source for nvim-cmp
         use 'L3MON4D3/LuaSnip' -- Snippets plugin
 	use {'nvim-telescope/telescope.nvim', requires = { {'nvim-lua/plenary.nvim'} } }
-	use 'puremourning/vimspector'
+--	use 'puremourning/vimspector'
+	use 'folke/which-key.nvim'
+	use 'onsails/lspkind.nvim'
+	use 'Issafalcon/lsp-overloads.nvim'
+	use 'mfussenegger/nvim-dap'
+	use 'rcarriga/nvim-dap-ui'
+	use 'theHamsta/nvim-dap-virtual-text'
+	use 'rcarriga/cmp-dap'
 end)
