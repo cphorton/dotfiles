@@ -23,7 +23,10 @@ end
 dap.adapters.coreclr = {
   type = 'executable',
   command = netcoredbgCommand,
-  args = {'--interpreter=vscode'}
+  args = {'--interpreter=vscode'},
+  options = {
+      cwd = '/home/frogboy/Development/odometer-scanner/OdometerScanner.Api/bin/Debug/net6.0'
+    }    
 }
 
 vim.g.dotnet_build_project = function()
