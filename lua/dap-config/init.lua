@@ -12,7 +12,7 @@ vim.fn.sign_define('DapStopped', { text='', texthl='TSCharacter', linehl='Dap
 local netcoredbgCommand
 
 if vim.fn.has('win32') == 1 then
-  netcoredbgCommand = 'c:\\Program Files\\netcoredbg\\netcoredbg.exe'
+  netcoredbgCommand = 'c:\\tools\\netcoredbg\\netcoredbg.exe'
 elseif vim.fn.has('linux') == 1 then
   netcoredbgCommand = '/usr/bin/netcoredbg'
 end
@@ -26,17 +26,28 @@ dap.adapters.coreclr = {
   args = {'--interpreter=vscode'}
 }
 
+
 vim.g.dotnet_build_project = function()
+
     local default_path = vim.fn.getcwd() .. '/'
     if vim.g['dotnet_last_proj_path'] ~= nil then
         default_path = vim.g['dotnet_last_proj_path']
     end
     local path = vim.fn.input('Path to your *proj file ', default_path, 'file')
     vim.g['dotnet_last_proj_path'] = path
-    local cmd = 'dotnet build -c Debug ' .. path .. ' > /dev/null'
+    --local cmd =  'dotnet build -c Debug ' .. path .. nullOutput
+
+    local buildCommand 
+
+    if vim.fn.has('win32') == 1 then
+        buildCommand =  'dotnet build -c Debug ' .. path .. ' > NUL'
+    elseif vim.fn.has('linux') == 1 then
+        buildCommand =  'dotnet build -c Debug ' .. path .. ' > /dev/null'
+    end
+
     print('')
-    print('Cmd to execute: ' .. cmd)
-    local f = os.execute(cmd)
+    print('Cmd to execute: ' .. buildCommand)
+    local f = os.execute(buildCommand)
     if f == 0 then
         print('\nBuild: ✔️ ')
     else
@@ -46,13 +57,22 @@ end
 
 vim.g.dotnet_get_dll_path = function()
     local request = function()
-        return vim.fn.input('Path to dll', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+
+        local path 
+
+        if vim.fn.has('win32') == 1 then
+            path =  '\\bin\\Debug\\'
+        elseif vim.fn.has('linux') == 1 then
+            path =  '/bin/Debug/'
+        end
+
+        return vim.fn.input('Path to dll', vim.fn.getcwd() .. path, 'file')
     end
 
     if vim.g['dotnet_last_dll_path'] == nil then
         vim.g['dotnet_last_dll_path'] = request()
     else
-        if vim.fn.confirm('Do you want to change the path to dll?\n' .. vim.g['dotnet_last_dll_path'], '&yes\n&no', 2) == 1 then
+        if vim.fn.confirm('Do you want to change the path to dll? \n' .. vim.g['dotnet_last_dll_path'], '&yes\n&no', 2) == 1 then
             vim.g['dotnet_last_dll_path'] = request()
         end
     end
