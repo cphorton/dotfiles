@@ -21,4 +21,5 @@ return require('packer').startup(function()
 	use 'rcarriga/nvim-dap-ui'
 	use 'theHamsta/nvim-dap-virtual-text'
 	use 'rcarriga/cmp-dap'
+    use 'akinsho/toggleterm.nvim'
 end)
