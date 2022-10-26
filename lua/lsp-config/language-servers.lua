@@ -77,6 +77,10 @@ local nvim_lsp = require('lspconfig').omnisharp.setup {
   cmd = omniSharpCommand 
 }
 
+require('lspconfig').svelte.setup{}
+
+
+
 local lsp_flags = {
   -- This is the default in Nvim 0.7+
   debounce_text_changes = 150,
