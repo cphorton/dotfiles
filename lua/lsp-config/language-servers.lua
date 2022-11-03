@@ -77,9 +77,22 @@ local nvim_lsp = require('lspconfig').omnisharp.setup {
   cmd = omniSharpCommand 
 }
 
+--Svelte setup
 require('lspconfig').svelte.setup{}
 
+--Typescript / Javascript
 
+require('lspconfig').tsserver.setup{}
+
+
+-- Setup Html LSP server
+--Enable (broadcasting) snippet capability for completion
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+capabilities.textDocument.completion.completionItem.snippetSupport = true
+
+require('lspconfig').html.setup {
+  capabilities = capabilities,
+}
 
 local lsp_flags = {
   -- This is the default in Nvim 0.7+

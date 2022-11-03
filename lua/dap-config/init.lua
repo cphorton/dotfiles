@@ -25,7 +25,7 @@ dap.adapters.coreclr = {
   command = netcoredbgCommand,
   args = {'--interpreter=vscode'},
   options = {
-      cwd = '/home/frogboy/Development/odometer-scanner/OdometerScanner.Api/bin/Debug/net6.0'
+      cwd = 'C:\\Development\\Applications\\OctopusTenantVariableCopy\\OctopusTenantVariableCopy\\bin\\Debug\\net6.0'
     }    
 }
 
