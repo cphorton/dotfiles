@@ -54,7 +54,11 @@ map('n', '<Space>bw', '<Cmd>BufferOrderByWindowNumber<CR>', opts)
 map('n', '<leader>ff', ':Telescope find_files<CR>', opts)
 map('n', '<leader>fg', ':Telescope live_grep<CR>', opts)
 map('n', '<leader>fr', ':Telescope lsp_references<CR>', opts)
-
+map('n', '<leader>fk', ':Telescope keymaps<CR>', opts)
+map('n', '<leader>fgc', ':Telescope git-commits<CR>', opts)
+map('n', '<leader>fgb', ':Telescope git-branches<CR>', opts)
+map('n', '<leader>fi', ':Telescope lsp_implementations<CR>', opts)
+    
 
 --Dotnet
 map('n', '<C-b>', ':lua vim.g.dotnet_build_project()<CR>', opts)
