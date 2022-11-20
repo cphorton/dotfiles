@@ -28,4 +28,7 @@ return require('packer').startup(function()
     }
     use 'nvim-telescope/telescope-ui-select.nvim'
     use 'folke/tokyonight.nvim'
+    use 'numToStr/Comment.nvim'
+    
+
 end)
