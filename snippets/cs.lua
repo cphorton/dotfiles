@@ -6,9 +6,13 @@ local t = ls.text_node
 local i = ls.insert_node
 local f = ls.function_node
 local d = ls.dynamic_node
+local c = ls.choice_node
 local fmt = require("luasnip.extras.fmt").fmt
 local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
+
+
+local accessModifiers = {t "public", t "private", t "protected", t "internal", t "protected internal", t "private protected"}
 
 
 local get_namespace = function ()
@@ -30,22 +34,30 @@ local get_classname = function ()
 end
 
 
+
+
+
+
+
 -- A snippet that creates a namespace based on the folder structure
 local namespace = function()
     return s(
-    { trig = "namespace",descr="Create folder-based namespace" },
+    { trig = "namespace",descr="Create folder-based namespace and class" },
     fmt(
         [[
         namespace {}
         {{
-            public class {}
+            {} {}class {}
             {{
                 {}
             }}
         }}
 
         ]],
-        {get_namespace(),get_classname(), i(0)}
+        {get_namespace(),
+        c(1, {t "public", t "internal"}),
+        c(2, {t "", t "static "}),
+        get_classname(), i(0)}
         )
   )
 end
@@ -64,7 +76,7 @@ end
 local class = function()
     return
     s(
-        {trig="class", descr="Create a public class"},
+        {trig="class", descr="Create a class"},
 
         fmt(
             [[
@@ -78,34 +90,37 @@ local class = function()
     )
 end
 
---Create a static class
-local sclass = function()
+
+local method = function()
     return
     s(
-        {trig="sclass", descr="Create a public static class"},
-        
+        {trig="method", descr="Create a method"},
+
         fmt(
             [[
-            public static class {}
+            {} {}{} {}({})
             {{
                 {}
             }}
             ]],
-            {i(1, "MyClass"), i(0)}
+
+            {
+                c(1, accessModifiers),      --public, private etc
+                c(2, {t "", t "static "}),  --static choice
+                i(3, "void"),               --return type
+                i(4,"MyMethod"),            --method name
+                i(5),                       --parameters
+                i(0)}                       --body
             )
     )
 end
-
-
- 
-
 
 return {
     
     namespace(),
     property(),
     class(),
-    sclass(),
+    method(),
     -- record snippet
     s(
     {trig="rec", descr="Create a record"},
@@ -113,6 +128,6 @@ return {
         [[public record {} ({})]],
         {i(1, "RecordName"), i(0)}
         )
-    )
+    ),
 
 }

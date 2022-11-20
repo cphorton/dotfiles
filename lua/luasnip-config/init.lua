@@ -1,5 +1,6 @@
 local ls = require("luasnip")
 
+local types = require("luasnip.util.types")
 
 
 --require("luasnip-config.csharp-snippets")
@@ -9,7 +10,15 @@ ls.setup({
     history = true,
 	-- Update more often, :h events for more info.
 	update_events = "TextChanged,TextChangedI",
-    enable_autosnippets = true
+    enable_autosnippets = true,
+    ext_opts = {
+		[types.choiceNode] = {
+			active = {
+				virt_text = { { "●", "CmpItemKindUnit" } },
+
+			},
+		},
+    },
 })
 
 
@@ -30,18 +39,19 @@ end, {silent = true})
 
 vim.keymap.set("i", "<c-l>", function()
     if ls.choice_active() then
-        ls.choice_active(1)
+        ls.change_choice(1)
     end
-end)
+end,
+{desc = "Snippet Choices"})
 
 
-
-
-
-
-
-
-
+-- local luaSnipSource
+--
+-- if vim.fn.has('win32') == 1 then
+--   luaSnipSource = 'C:\\Program Files\\Omnisharp\\omnisharp.dll', "--languageserver", "--hostpid", tostring(pid)}
+-- elseif vim.fn.has('linux') == 1 then
+--   omniSharpCommand = { '/usr/bin/omnisharp', "--languageserver", "--hostpid", tostring(pid)}
+-- end
 
 vim.keymap.set("n", "<leader><leader>s","<cmd>source ~/.config/nvim/lua/luasnip-config/init.lua<CR>")
 
