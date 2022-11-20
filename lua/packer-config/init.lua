@@ -27,4 +27,7 @@ return require('packer').startup(function()
         requires = 'antoinemadec/FixCursorHold.nvim',
     }
     use 'nvim-telescope/telescope-ui-select.nvim' 
+    use 'numToStr/Comment.nvim'
+    
+
 end)
