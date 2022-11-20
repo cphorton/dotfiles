@@ -24,7 +24,8 @@ return require('packer').startup(function()
     use 'akinsho/toggleterm.nvim'
     use {
         'kosayoda/nvim-lightbulb',
-        requires = 'antoinemadec/FixCursorHold.nvim',
+        requires = 'antoinemadec/FixCursorHold.nvim'
     }
-    use 'nvim-telescope/telescope-ui-select.nvim' 
+    use 'nvim-telescope/telescope-ui-select.nvim'
+    use 'folke/tokyonight.nvim'
 end)

@@ -15,6 +15,6 @@ set.smartcase = true
 
 set.relativenumber = true
 set.cursorline = true
-
+set.colorcolumn = '140'
 
 vim.notify = require('notify')
