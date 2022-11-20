@@ -62,7 +62,7 @@ map('n', '<leader>fi', ':Telescope lsp_implementations<CR>', opts)
 
 --Dotnet
 map('n', '<C-b>', ':lua vim.g.dotnet_build_project()<CR>', opts)
-
+map('n', '<leader>cr', ':LspRestart<CR>:e!<CR>', opts)
 
 --DAP
 
