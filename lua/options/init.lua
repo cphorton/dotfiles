@@ -17,4 +17,6 @@ set.relativenumber = true
 set.cursorline = true
 set.colorcolumn = '140'
 
+set.signcolumn = 'number'
+
 vim.notify = require('notify')

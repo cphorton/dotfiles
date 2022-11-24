@@ -11,16 +11,21 @@ local fmt = require("luasnip.extras.fmt").fmt
 local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
-
 local accessModifiers = {t "public", t "private", t "protected", t "internal", t "protected internal", t "private protected"}
-
+-- local accessModifier = {t "public"}
 
 local get_namespace = function ()
     return f(function()
         --get the path from our root, without the buffer filename
-        --https://neovim.io/doc/user/cmdline.html#cmdline-special
-        local path = vim.fn.expand('%:p:~:.:h')
-        return path:gsub("/","."):gsub("\\",".")
+        --based on the lsp workspace - in this case the csproj file
+        local root = vim.lsp.buf.list_workspace_folders()[1]
+
+        local path = vim.fn.expand('%:h')
+
+        local bufferPath = path:gsub(root,"")
+        bufferPath = bufferPath:sub(2)
+
+        return bufferPath:gsub("/","."):gsub("\\",".")
     end
     )
 end
@@ -33,12 +38,9 @@ local get_classname = function ()
     )
 end
 
-
-
-return(
-
+ls.add_snippets("cs",
 {
-    -- A snippet that creates a namespace based on the folder structure
+    -- A snippet that creates a namespace and class based on the folder structure
     s(
     { trig = "sns",descr="Create folder-based namespace and class" },
     fmt(
@@ -82,7 +84,6 @@ return(
         )
     ),
 
-
     -- create an interface
     s(
     {trig="sin", descr="Create an interface"},
@@ -110,7 +111,7 @@ return(
         ]],
 
         {
-            c(1, accessModifiers),      --public, private etc
+            c(1, {t "public"}),      --public, private etc
             c(2, {t "", t "static "}),  --static choice
             i(3, "void"),               --return type
             i(4,"MyMethod"),            --method name
@@ -161,5 +162,53 @@ return(
         ]],
         {i(0)}
         )
-    )    
+    ),
+
+    --If statement
+    s(
+    {trig="sif", descr="If statement"},
+    fmt(
+        [[
+        if ({})
+        {{
+            {}
+        }}
+        ]],
+        {i(1),i(0)}
+        )
+    ),
+    -- Create a Mediatr Handler
+    s(
+    {trig="smh", descr="Create a Mediatr handler class"},
+    fmt(
+        [[
+        {} class {} : IRequestHandler<{}, {}>
+        {{
+            {}
+        }}
+        ]],
+        {c(1, {t "public", t "internal"}),
+        i(2, "MyClass"), i(3, "MyRequestType"), i(4,"MyReturnType"), i(0)}
+        )
+    ),
+
+    -- Create a Mediatr Handler
+    s(
+    {trig="snmh", descr="Create a Mediatr handler class"},
+    fmt(
+        [[
+        using MediatR;
+        namespace {}
+        {{
+            {} class {} : IRequestHandler<{}, {}>
+            {{
+                {}
+            }}
+        }}
+        ]],
+        {get_namespace(),
+        c(1, {t "public", t "internal"}),
+        i(2, "MyClass"), i(3, "MyRequestType"), i(4,"MyReturnType"), i(0)}
+        )
+    )
 })

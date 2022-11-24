@@ -58,7 +58,7 @@ map('n', '<leader>fk', ':Telescope keymaps<CR>', opts)
 map('n', '<leader>fgc', ':Telescope git-commits<CR>', opts)
 map('n', '<leader>fgb', ':Telescope git-branches<CR>', opts)
 map('n', '<leader>fi', ':Telescope lsp_implementations<CR>', opts)
-    
+map('n', '<leader>fb', ':Telescope buffers<CR>', opts)
 
 --Dotnet
 map('n', '<C-b>', ':lua vim.g.dotnet_build_project()<CR>', opts)
