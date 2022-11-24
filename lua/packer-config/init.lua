@@ -1,4 +1,4 @@
-return require('packer').startup(function()
+return require('packer').startup({function()
 	use 'wbthomason/packer.nvim'
     use 'navarasu/onedark.nvim'
     use 'EdenEast/nightfox.nvim'
@@ -22,13 +22,13 @@ return require('packer').startup(function()
 	use 'theHamsta/nvim-dap-virtual-text'
 	use 'rcarriga/cmp-dap'
     use 'akinsho/toggleterm.nvim'
-    use {
-        'kosayoda/nvim-lightbulb',
-        requires = 'antoinemadec/FixCursorHold.nvim'
-    }
     use 'nvim-telescope/telescope-ui-select.nvim'
     use 'folke/tokyonight.nvim'
     use 'numToStr/Comment.nvim'
     use 'windwp/nvim-autopairs'
+end, 
 
-end)
+config={
+    max_jobs=10
+    }
+})
