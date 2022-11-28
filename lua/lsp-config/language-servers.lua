@@ -90,11 +90,22 @@ local nvim_lsp = require('lspconfig').omnisharp.setup {
 }
 
 --Svelte setup
-require('lspconfig').svelte.setup{}
+require('lspconfig').svelte.setup({
+    on_attach = on_attach,
+    capabilities = capabilities
+})
 
 --Typescript / Javascript
+require('lspconfig').tsserver.setup({
+    on_attach = on_attach,
+    capabilities = capabilities
+})
 
-require('lspconfig').tsserver.setup{}
+require('lspconfig').sumneko_lua.setup({
+    on_attach = on_attach,
+    capabilities = capabilities
+})
+
 
 
 -- Setup Html LSP server

@@ -194,7 +194,7 @@ ls.add_snippets("cs",
 
     -- Create a Mediatr Handler
     s(
-    {trig="snmh", descr="Create a Mediatr handler class"},
+    {trig="snmh", descr="Create a namespace and Mediatr handler class"},
     fmt(
         [[
         using MediatR;
@@ -210,5 +210,31 @@ ls.add_snippets("cs",
         c(1, {t "public", t "internal"}),
         i(2, "MyClass"), i(3, "MyRequestType"), i(4,"MyReturnType"), i(0)}
         )
-    )
+    ),
+    -- Create a Mediatr Handler
+        -- https://github.com/L3MON4D3/LuaSnip/wiki/Cool-Snippets#all---insert-space-when-the-next-character-after-snippet-is-a-letter
+    -- s(
+    -- {trig="smhf", descr="Create a Mediatr handler class"},
+    -- fmt(
+    --     [[
+    --     public class {}
+    --     {{
+    --
+    --         public record {}({}) : IRequest<{}>
+    --
+    --         public record {}({})
+    --
+    --         public class {} : IRequestHandler<{}, {}>
+    --         {{
+    --             {}
+    --         }}
+    --     }}
+    --     ]],
+    --     {c(1, {t "public", t "internal"}),
+    --     i(2, "MyClass"), i(3, "MyRequestType"), i(4,"MyReturnType"), i(0)}
+    --     )
+    -- )
+
+
+   
 })

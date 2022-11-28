@@ -4,7 +4,6 @@ return require('packer').startup({function()
     use 'EdenEast/nightfox.nvim'
 	use 'kyazdani42/nvim-web-devicons'
 	use 'nvim-tree/nvim-tree.lua'
-	use 'neovim/nvim-lspconfig'
 	use {'nvim-treesitter/nvim-treesitter', run = ':TSUpdate'}
 	use 'rcarriga/nvim-notify'
 	use 'nvim-lualine/lualine.nvim'
@@ -26,7 +25,13 @@ return require('packer').startup({function()
     use 'folke/tokyonight.nvim'
     use 'numToStr/Comment.nvim'
     use 'windwp/nvim-autopairs'
-end, 
+    use 'williamboman/mason.nvim'
+    use 'williamboman/mason-lspconfig.nvim'
+	use 'neovim/nvim-lspconfig'
+    use 'Tastyep/structlog.nvim'
+    use 'lukas-reineke/indent-blankline.nvim'
+    use 'lewis6991/gitsigns.nvim'
+end,
 
 config={
     max_jobs=10
