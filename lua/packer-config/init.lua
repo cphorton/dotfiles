@@ -1,6 +1,8 @@
 return require('packer').startup({function()
 	use 'wbthomason/packer.nvim'
+    use 'nvim-lua/plenary.nvim'
     use 'navarasu/onedark.nvim'
+    use 'antoinemadec/FixCursorHold.nvim'
     use 'EdenEast/nightfox.nvim'
 	use 'kyazdani42/nvim-web-devicons'
 	use 'nvim-tree/nvim-tree.lua'
@@ -12,7 +14,7 @@ return require('packer').startup({function()
     use 'hrsh7th/cmp-nvim-lsp' -- LSP source for nvim-cmp
     use 'saadparwaiz1/cmp_luasnip' -- Snippets source for nvim-cmp
     use 'L3MON4D3/LuaSnip' -- Snippets plugin
-	use {'nvim-telescope/telescope.nvim', requires = { {'nvim-lua/plenary.nvim'} } }
+	use 'nvim-telescope/telescope.nvim'
 	use 'folke/which-key.nvim'
 	use 'onsails/lspkind.nvim'
 	use 'Issafalcon/lsp-overloads.nvim'
@@ -31,6 +33,14 @@ return require('packer').startup({function()
     use 'Tastyep/structlog.nvim'
     use 'lukas-reineke/indent-blankline.nvim'
     use 'lewis6991/gitsigns.nvim'
+    use ({'nvim-neotest/neotest',
+        requires = {
+            {
+                'issafalcon/neotest-dotnet',
+            },
+        }
+    })
+
 end,
 
 config={
