@@ -11,8 +11,33 @@ local fmt = require("luasnip.extras.fmt").fmt
 local fmta = require("luasnip.extras.fmt").fmta
 local rep = require("luasnip.extras").rep
 
+local scan = require("plenary.scandir")
+
+function string:endswith(suffix)
+    return self:sub(-#suffix) == suffix
+end
+
+
 local accessModifiers = {t "public", t "private", t "protected", t "internal", t "protected internal", t "private protected"}
 -- local accessModifier = {t "public"}
+
+--Use Plenary to scan the current file and then get the csproj name
+local get_csproj_name = function()
+    local proj_files = scan.scan_dir(".", {search_pattern = function(entry)
+        return entry:endswith(".csproj")
+    end} )
+
+    if(next(proj_files) ~= nil) then
+        local fileName = proj_files[1]
+
+        fileName = fileName:gsub(".csproj",""):gsub("%.",""):gsub("/",""):gsub("\\","")
+        return fileName
+    end
+
+    return ""
+end
+
+
 
 local get_namespace = function ()
     return f(function()
@@ -25,6 +50,9 @@ local get_namespace = function ()
         local bufferPath = path:gsub(root,"")
         bufferPath = bufferPath:sub(2)
 
+        if(bufferPath == "")then
+            bufferPath = get_csproj_name()
+        end
         return bufferPath:gsub("/","."):gsub("\\",".")
     end
     )
@@ -234,7 +262,23 @@ ls.add_snippets("cs",
     --     i(2, "MyClass"), i(3, "MyRequestType"), i(4,"MyReturnType"), i(0)}
     --     )
     -- )
+    s(
+    {trig="ssw", descr="Switch statement"},
+    fmt(
+        [[
+            switch ({})
+            {{
+                case {}:
+                    {}
+                    break;
 
+                default:                
+                    break;
+            }}
+        ]],
+        {i(1, "value"),i(2),i(0)}
+            )
+        )
 
    
 })
