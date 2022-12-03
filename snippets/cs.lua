@@ -50,9 +50,15 @@ local get_namespace = function ()
         local bufferPath = path:gsub(root,"")
         bufferPath = bufferPath:sub(2)
 
+        local csproj_name = get_csproj_name()
+
         if(bufferPath == "")then
-            bufferPath = get_csproj_name()
+            bufferPath = csproj_name
+        elseif (not bufferPath:match(csproj_name)) then
+            bufferPath = csproj_name .. "." .. bufferPath
         end
+
+
         return bufferPath:gsub("/","."):gsub("\\",".")
     end
     )
