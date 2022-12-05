@@ -6,6 +6,10 @@ set.smarttab = true
 set.shiftwidth = 4
 set.tabstop = 4
 
+set.copyindent = true
+set.preserveindent = true
+
+
 set.scrolloff = 5
 set.termguicolors = true
 
