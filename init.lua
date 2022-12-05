@@ -26,3 +26,5 @@ require('lsp-config.nvim-cmp')
 
 require('indentblankline-config')
 require('gitsigns-config')
+require('neotest-config')
+require('renamer-config')
