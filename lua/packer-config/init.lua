@@ -41,6 +41,7 @@ return require('packer').startup({function()
             },
         }
     })
+    use 'filipdutescu/renamer.nvim'
 
 end,
 
