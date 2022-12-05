@@ -3,6 +3,37 @@ local opts = {noremap = true, silent = true}
 
 vim.g.mapleader = ' '
 
+--normal
+-- Better window navigation
+map("n", "<C-h>", "<C-w>h", opts)
+map("n", "<C-j>", "<C-w>j", opts)
+map("n", "<C-k>", "<C-w>k", opts)
+map("n", "<C-l>", "<C-w>l", opts)
+
+-- Resize with arrows
+map("n", "<C-Up>", ":resize -2<CR>", opts)
+map("n", "<C-Down>", ":resize +2<CR>", opts)
+map("n", "<C-Left>", ":vertical resize -2<CR>", opts)
+map("n", "<C-Right>", ":vertical resize +2<CR>", opts)
+
+-- Move text up and down
+map("n", "<A-j>", "<Esc>:m .+1<CR>==gi", opts)
+map("n", "<A-k>", "<Esc>:m .-2<CR>==gi", opts)
+
+-- Visual --
+-- Stay in indent mode
+map("v", "<", "<gv", opts)
+map("v", ">", ">gv", opts)
+
+-- Move text up and down
+map("v", "<A-j>", ":m .+1<CR>==", opts)
+map("v", "<A-k>", ":m .-2<CR>==", opts)
+map("v", "p", '"_dP', opts)
+
+
+
+
+--nvim tree
 map('n','<leader>tt', ':NvimTreeToggle<CR>', opts)
 map('n','<leader>tw', ':NvimTreeResize 60<CR>', opts)
 map('n','<leader>tr', ':NvimTreeResize 30<CR>', opts)
@@ -75,6 +106,9 @@ map('n', '<Leader>B', ':lua require"dap".set_breakpoint(vim.fn.input("Breakpoint
 map('n', '<Leader>lp', ':lua require"dap".set_breakpoint(nil, nil, vim.fn.input("Log point message: "))<CR>', opts)
 map('n', '<Leader>dr', ':lua require"dap".repl.open()<CR>', opts)
 map('n', '<Leader>dl', ':lua require"dap".run_last()<CR>', opts)
+map('n', '<Leader>dt', ':lua require"dapui".toggle()<CR>', opts)
+map('n', '<Leader>do', ':lua require"dapui".open()<CR>', opts)
+map('n', '<Leader>dc', ':lua require"dapui".close()<CR>', opts)
 
 
 
