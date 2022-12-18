@@ -45,26 +45,21 @@ vim.diagnostic.config({
   vim.keymap.set('n', 'gd', vim.lsp.buf.definition, bufopts)
   vim.keymap.set('n', 'K', vim.lsp.buf.hover, bufopts)
   vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, bufopts)
-  vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, bufopts)
+  vim.keymap.set('n', '<leader>cs', vim.lsp.buf.signature_help, bufopts)
   vim.keymap.set('n', '<space>wa', vim.lsp.buf.add_workspace_folder, bufopts)
   vim.keymap.set('n', '<space>wr', vim.lsp.buf.remove_workspace_folder, bufopts)
   vim.keymap.set('n', '<space>wl', function()
     print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
   end, bufopts)
   
- -- vim.keymap.set('n', '<leader>crt', require('neotest').run.run(), bufopts)
+  --vim.keymap.set('n', '<leader>crt', require('neotest').run.run(), bufopts)
   vim.keymap.set('n', '<leader>ch', vim.lsp.buf.hover, bufopts)
   vim.keymap.set('n', '<leader>D', vim.lsp.buf.type_definition, bufopts)
-  vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
+  -- vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, bufopts)
   vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, bufopts)
   vim.keymap.set('n', 'gr', vim.lsp.buf.references, bufopts)
   vim.keymap.set('n', '<space>f', function() vim.lsp.buf.format { async = true } end, bufopts)
 end
-
-  
-
-
-
 
 --local servers = { 'omnisharp'}
 
@@ -83,13 +78,13 @@ end
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
 
-local nvim_lsp = require('lspconfig').omnisharp.setup {
+require('lspconfig').omnisharp.setup {
   --on_attach = function(_, bufnr)
   --  vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   --end,
   on_attach = on_attach,
   capabilities,
-  cmd = omniSharpCommand 
+  cmd = omniSharpCommand
 }
 
 --Svelte setup
@@ -113,7 +108,7 @@ require('lspconfig').sumneko_lua.setup({
 
 -- Setup Html LSP server
 --Enable (broadcasting) snippet capability for completion
-local capabilities = vim.lsp.protocol.make_client_capabilities()
+--local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities.textDocument.completion.completionItem.snippetSupport = true
 
 require('lspconfig').html.setup {

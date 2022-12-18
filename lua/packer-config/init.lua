@@ -7,7 +7,8 @@ return require('packer').startup({function()
 	use 'kyazdani42/nvim-web-devicons'
 	use 'nvim-tree/nvim-tree.lua'
 	use {'nvim-treesitter/nvim-treesitter', run = ':TSUpdate'}
-	use 'rcarriga/nvim-notify'
+    use 'nvim-treesitter/playground'
+    use 'rcarriga/nvim-notify'
 	use 'nvim-lualine/lualine.nvim'
 	use 'romgrk/barbar.nvim'
 	use 'hrsh7th/nvim-cmp' -- Autocompletion plugin
@@ -40,7 +41,10 @@ return require('packer').startup({function()
             },
         }
     })
-
+    use 'filipdutescu/renamer.nvim'
+    use 'debugloop/telescope-undo.nvim'
+    use 'mbbill/undotree'
+    use 'ThePrimeagen/harpoon'
 end,
 
 config={
