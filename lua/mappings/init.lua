@@ -90,6 +90,13 @@ map('n', '<leader>fgc', ':Telescope git-commits<CR>', opts)
 map('n', '<leader>fgb', ':Telescope git-branches<CR>', opts)
 map('n', '<leader>fi', ':Telescope lsp_implementations<CR>', opts)
 map('n', '<leader>fb', ':Telescope buffers<CR>', opts)
+map('n', '<leader>fu', ':Telescope undo<CR>', opts)
+
+--TreeUndo
+
+map('n', '<leader>ut', ':UndotreeToggle<CR>', opts)
+
+
 
 --Dotnet
 map('n', '<C-b>', ':lua vim.g.dotnet_build_project()<CR>', opts)
@@ -110,7 +117,23 @@ map('n', '<Leader>dt', ':lua require"dapui".toggle()<CR>', opts)
 map('n', '<Leader>do', ':lua require"dapui".open()<CR>', opts)
 map('n', '<Leader>dc', ':lua require"dapui".close()<CR>', opts)
 
+--Harpoon
 
 
+map('n', '<leader>fh', ':Telescope harpoon marks<CR>', opts)
+map('n', '<Leader>hh', ':lua require("harpoon.mark").add_file()<CR>', opts)
+map('n', '<Leader>hl', ':lua require("harpoon.ui").toggle_quick_menu()<CR>', opts)
+map('n', '<Leader>h1', ':lua require("harpoon.ui").nav_file(1)<CR>', opts)
+map('n', '<Leader>h2', ':lua require("harpoon.ui").nav_file(2)<CR>', opts)
+map('n', '<Leader>h3', ':lua require("harpoon.ui").nav_file(3)<CR>', opts)
+map('n', '<Leader>h4', ':lua require("harpoon.ui").nav_file(4)<CR>', opts)
+map('n', '<Leader>ha', ':lua require("harpoon.ui").nav_file(1)<CR>', opts)
+map('n', '<Leader>hs', ':lua require("harpoon.ui").nav_file(2)<CR>', opts)
+map('n', '<Leader>hd', ':lua require("harpoon.ui").nav_file(3)<CR>', opts)
+map('n', '<Leader>hf', ':lua require("harpoon.ui").nav_file(4)<CR>', opts)
+map('n', '<Leader>1', ':lua require("harpoon.ui").nav_file(1)<CR>', opts)
+map('n', '<Leader>2', ':lua require("harpoon.ui").nav_file(2)<CR>', opts)
+map('n', '<Leader>3', ':lua require("harpoon.ui").nav_file(3)<CR>', opts)
+map('n', '<Leader>4', ':lua require("harpoon.ui").nav_file(4)<CR>', opts)
 
 

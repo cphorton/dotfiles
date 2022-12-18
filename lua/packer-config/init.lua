@@ -42,7 +42,9 @@ return require('packer').startup({function()
         }
     })
     use 'filipdutescu/renamer.nvim'
-
+    use 'debugloop/telescope-undo.nvim'
+    use 'mbbill/undotree'
+    use 'ThePrimeagen/harpoon'
 end,
 
 config={
