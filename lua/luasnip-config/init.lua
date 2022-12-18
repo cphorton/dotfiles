@@ -45,17 +45,20 @@ end,
 {desc = "Snippet Choices"})
 
 
--- local luaSnipSource
---
--- if vim.fn.has('win32') == 1 then
---   luaSnipSource = 'C:\\Program Files\\Omnisharp\\omnisharp.dll', "--languageserver", "--hostpid", tostring(pid)}
--- elseif vim.fn.has('linux') == 1 then
---   omniSharpCommand = { '/usr/bin/omnisharp', "--languageserver", "--hostpid", tostring(pid)}
--- end
+ local luaSnipSource = "Nothing set yet"
+
+ if vim.fn.has('win32') == 1 then
+   luaSnipSource = "c:\\users\\chrish\\AppData\\Local\\nvim\\snippets\\"
+ elseif vim.fn.has('linux') == 1 then
+   luaSnipSource = "~/.config/nvim/snippets/"
+ end
+
+print(luaSnipSource)
+
 
 vim.keymap.set("n", "<leader><leader>s","<cmd>source ~/.config/nvim/lua/luasnip-config/init.lua<CR>")
 
-require("luasnip.loaders.from_lua").load({paths = "~/.config/nvim/snippets/"})
+require("luasnip.loaders.from_lua").load({paths = luaSnipSource})
 
 --require("luasnip-config.csharp-snippets")
 --require("luasnip.loaders.from_snipmate").load()
