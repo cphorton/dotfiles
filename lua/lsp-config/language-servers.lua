@@ -10,9 +10,35 @@
 -- after the language server attaches to the current buffer
 local on_attach = function(client, bufnr)
 
+
+local _border = "single"
+
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
+  vim.lsp.handlers.hover, {
+    border = _border
+  }
+)
+
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
+  vim.lsp.handlers.signature_help, {
+    border = _border
+  }
+)
+
+vim.diagnostic.config{
+  float={border=_border}
+}
+
+
+
   -- Guard against servers without the signatureHelper capability
   if client.server_capabilities.signatureHelpProvider then
-    require('lsp-overloads').setup(client, { })
+    require('lsp-overloads').setup(client, { keymaps = {
+            next_signature = "<A-j>",
+            previous_signature = "<A-k>",
+            next_parameter = "<A-l>",
+            previous_parameter = "<A-h>",
+        } })
   end
 
 local signs = { Error = " ", Warn = " ", Hint = " ", Information = " " }
