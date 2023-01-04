@@ -119,7 +119,6 @@ map('n', '<Leader>dc', ':lua require"dapui".close()<CR>', opts)
 
 --Harpoon
 
-
 map('n', '<leader>fh', ':Telescope harpoon marks<CR>', opts)
 map('n', '<Leader>hh', ':lua require("harpoon.mark").add_file()<CR>', opts)
 map('n', '<Leader>hl', ':lua require("harpoon.ui").toggle_quick_menu()<CR>', opts)
@@ -135,5 +134,4 @@ map('n', '<Leader>1', ':lua require("harpoon.ui").nav_file(1)<CR>', opts)
 map('n', '<Leader>2', ':lua require("harpoon.ui").nav_file(2)<CR>', opts)
 map('n', '<Leader>3', ':lua require("harpoon.ui").nav_file(3)<CR>', opts)
 map('n', '<Leader>4', ':lua require("harpoon.ui").nav_file(4)<CR>', opts)
-
 
