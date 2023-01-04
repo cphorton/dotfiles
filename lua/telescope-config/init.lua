@@ -1,7 +1,10 @@
 require('telescope').setup{
 defaults = {
 	--path_display = { shorten = 3 },
-	path_display = { smart },
+    layout_config = {
+        horizontal = { width = 0.9, preview_width = 0.6}
+        },
+    path_display = { smart },
 	file_ignore_patterns = { "node_modules", ".git", "bin", "obj", ".vs" }
   },
     extensions = {
