@@ -45,6 +45,7 @@ return require('packer').startup({function()
     use 'debugloop/telescope-undo.nvim'
     use 'mbbill/undotree'
     use 'ThePrimeagen/harpoon'
+    use 'folke/trouble.nvim'
 end,
 
 config={
