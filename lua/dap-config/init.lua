@@ -1,13 +1,10 @@
 local dap = require('dap')
 
-
-
 vim.fn.sign_define('DapBreakpoint', { text='', texthl='TSError', linehl='DapBreakpoint', numhl='DapBreakpoint' })
 vim.fn.sign_define('DapBreakpointCondition', { text='ﳁ', texthl='TSError', linehl='DapBreakpoint', numhl='DapBreakpoint' })
 vim.fn.sign_define('DapBreakpointRejected', { text='', texthl='TSError', linehl='DapBreakpoint', numhl= 'DapBreakpoint' })
 vim.fn.sign_define('DapLogPoint', { text='', texthl='TSFloat', linehl='DapLogPoint', numhl= 'DapLogPoint' })
 vim.fn.sign_define('DapStopped', { text='', texthl='TSCharacter', linehl='DapStopped', numhl= 'DapStopped' })
-
 
 local netcoredbgCommand
 
@@ -17,18 +14,14 @@ elseif vim.fn.has('linux') == 1 then
   netcoredbgCommand = '/usr/bin/netcoredbg'
 end
 
-
-
-
 dap.adapters.coreclr = {
   type = 'executable',
   command = netcoredbgCommand,
   args = {'--interpreter=vscode'},
-  options = {
-      cwd = 'C:\\Development\\Applications\\OctopusTenantVariableCopy\\OctopusTenantVariableCopy\\bin\\Debug\\net6.0'
-    }    
+ -- options = {
+ --     cwd = 'C:\\Development\\Applications\\OctopusTenantVariableCopy\\OctopusTenantVariableCopy\\bin\\Debug\\net6.0'
+ --   }    
 }
-
 
 vim.g.dotnet_build_project = function()
 
@@ -40,7 +33,7 @@ vim.g.dotnet_build_project = function()
     vim.g['dotnet_last_proj_path'] = path
     --local cmd =  'dotnet build -c Debug ' .. path .. nullOutput
 
-    local buildCommand 
+    local buildCommand
 
     if vim.fn.has('win32') == 1 then
         buildCommand =  'dotnet build -c Debug ' .. path .. ' > NUL'
@@ -61,7 +54,7 @@ end
 vim.g.dotnet_get_dll_path = function()
     local request = function()
 
-        local path 
+        local path
 
         if vim.fn.has('win32') == 1 then
             path =  '\\bin\\Debug\\'
@@ -84,17 +77,17 @@ vim.g.dotnet_get_dll_path = function()
 end
 
 local config = {
-  {
-    type = "coreclr",
-    name = "launch - netcoredbg",
-    request = "launch",
-    program = function()
-        if vim.fn.confirm('Should I recompile first?', '&yes\n&no', 2) == 1 then
-            vim.g.dotnet_build_project()
-        end
-        return vim.g.dotnet_get_dll_path()
-    end,
-  },
+    {
+        type = "coreclr",
+        name = "launch - netcoredbg",
+        request = "launch",
+        program = function()
+            if vim.fn.confirm('Should I recompile first?', '&yes\n&no', 2) == 1 then
+                vim.g.dotnet_build_project()
+            end
+            return vim.g.dotnet_get_dll_path()
+        end,
+    },
 }
 
 dap.configurations.cs = config
