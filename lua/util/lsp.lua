@@ -7,7 +7,12 @@ M.capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
 
 M.setup = function()
 	vim.diagnostic.config({
-		virtual_text = false,
+        --Set virtual text to only show foor warnings and above
+		virtual_text = {
+            severity = {
+                min = vim.diagnostic.severity.WARN
+            }
+        },
 		float = {
 			focusable = false,
 			style = "minimal",
@@ -32,25 +37,6 @@ M.setup = function()
 		vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
 	end
 
-
-
-
-local ag = vim.api.nvim_create_augroup
-local au = vim.api.nvim_create_autocmd
-
--- GROUPS:
-local disable_obj_csharp_group =
-	ag("DisableObjCsharp", { clear = true })
-
--- AUTO-COMMANDS:
-au({ "BufNewFile", "BufRead" }, {
-	pattern = { "**/obj/**", "/obj/*" },
-	callback = function()
-		vim.diagnostic.disable(0)
-	end,
-	group = disable_obj_csharp_group,
-})
-
 end
 
 M.on_attach = function(client, bufnr)
@@ -61,6 +47,7 @@ M.on_attach = function(client, bufnr)
         --Add lsp plugin to allow for overloads
         require('lsp-overloads').setup(client, {
             ui = {
+                max_width = 80,
                 --Close the UI if the cursor is moved in normal or insert mode
                 close_events = { "CursorMoved", "CursorMovedI", "InsertCharPre" },
             },
