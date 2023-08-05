@@ -19,7 +19,7 @@ return {
       ["<leader>f"] = { name = "+file/find" },
       ["<leader>d"] = { name = "+debugger" },
       ["<leader>g"] = { name = "+git" },
---      ["<leader>s"] = { name = "+session" },
+      ["<leader>h"] = { name = "+harpoon" },
       ["<leader>t"] = { name = "+tree" },
       --["<leader>q"] = { name = "+quit/session" },
       ["<leader>s"] = { name = "+search" },
