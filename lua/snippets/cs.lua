@@ -34,13 +34,27 @@ end
 local accessModifiers = { t "public", t "private", t "protected", t "internal", t "protected internal",
     t "private protected" }
 
+
+local get_folder = function(file_path)
+
+    local sep = path.path.sep
+    local idx = file_path:match('^.*()'..sep) - 1
+
+    return file_path:sub(1,idx)
+
+end
+
 local get_csproj_name = function()
 
     local csproj_path = get_csproj_file()
+    local sep = path.path.sep
+
+    local index = csproj_path:match('^.*()'..sep) + 1
+
+    local  proj_name = csproj_path:sub(index)
     
-    if (csproj_path ~= nil) then
-        local filename = csproj_path:gsub(".csproj", ""):gsub("%.", ""):gsub("/", ""):gsub("\\", "")
-        return filename
+    if (proj_name ~= nil) then
+        return proj_name
     end
 
     return ""
@@ -48,16 +62,48 @@ end
 
 local get_namespace = function()
     return f(function()
-        local path = vim.fn.expand('%:h')
+        --local path = vim.fn.expand('%:h')
 
-        local csprojName = get_csproj_name()
+        local buffer_path = vim.api.nvim_buf_get_name(0)
+
+        -- print ("Buffer path: "..get_folder(buffer_path))
+
+
+        local csproj_file = get_csproj_file()
+
+        local project_path = get_folder(get_csproj_file())
+
+        -- print("Project path: "..project_path)
+
+
+        local csproj_name = get_csproj_name():gsub(".csproj","")
+
+        -- print("Full file: "..csproj_file)
+
+        -- print("Full path: "..buffer_path)
+
+        -- print("Projct name: "..csproj_name)
+
+        local namespace_path = buffer_path:gsub(project_path,"")
+
+        -- print("Namespace path: "..namespace_path)
+
+        local sep = path.path.sep
+        -- if (namespace_path:find(sep, 1, true) == 1) then
+        --     namespace_path = namespace_path:sub((sep:len() + 1))
+        -- end
+
+        namespace_path = csproj_name..get_folder(namespace_path)
+
 
         --swap out slashes for '.'
-        local namespace = path:gsub(csprojName,""):gsub("/","."):gsub("\\",".")
+        --local namespace = buffer_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
+        --local namespace = namespace_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
+        local namespace = namespace_path:gsub(sep,".")
 
-        -- if (namespace == ".") then
-        --     return csprojName
-        -- end
+        if (namespace == ".") then
+            return csproj_name
+        end
 
 
         return namespace
