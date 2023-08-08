@@ -145,7 +145,7 @@ ls.add_snippets("cs",
         -- property snippet
         s(
             { trig = "prop", descr = "create a property" },
-            fmt([[public {} {} {{get; set;}}]], { i(1, "int"), i(0, "MyProperty") })
+            fmt([[public {} {} {{ get; set; }}]], { i(1, "int"), i(0, "MyProperty") })
 
         ),
 
@@ -331,5 +331,43 @@ ls.add_snippets("cs",
         ]],
                 { i(1, "value"), i(2), i(0) }
             )
+        ),
+
+        --Razor page
+        s(
+            { trig = "razorpage", descr = "Razor Page" },
+            fmt(
+                [[ 
+                    @page
+                    @model {}
+                    @{{
+                    }}
+                ]],
+                { i(0) }
+            )
+        ),
+
+        --Razor model
+        s(
+            { trig = "razormodel", descr = "Razor Model" },
+            fmt(
+                [[ 
+                using Microsoft.AspNetCore.Mvc;
+                using Microsoft.AspNetCore.Mvc.RazorPages;
+
+                namespace {} 
+                {{
+                    public class {}Model : PageModel
+                    {{
+                        public void OnGet()
+                        {{
+                            {}
+                        }}
+                    }}
+                }}
+                ]],
+                { get_namespace(), i(1,"Index"), i(0) }
+            )
         )
+
     })

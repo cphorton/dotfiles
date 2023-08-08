@@ -49,6 +49,10 @@ return {
       { "<leader>h4", function() require('harpoon.ui').nav_file(4) end, desc = "Harpoon File 4" },
       { "<leader>hj", function() require("harpoon.ui").nav_next() end, desc = "Harpoon Next File" },
       { "<leader>hn", function() require("harpoon.ui").nav_prev() end, desc = "Harpoon Previous File" },
+      { "<leader>1", function() require("harpoon.ui").nav_file(1) end, desc = "Harpoon File 1" },
+      { "<leader>2", function() require('harpoon.ui').nav_file(2) end, desc = "Harpoon File 2" },
+      { "<leader>3", function() require('harpoon.ui').nav_file(3) end, desc = "Harpoon File 3" },
+      { "<leader>4", function() require('harpoon.ui').nav_file(4) end, desc = "Harpoon File 4" },
     }
   }
 }
