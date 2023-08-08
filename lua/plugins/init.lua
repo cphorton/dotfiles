@@ -39,7 +39,6 @@ return {
         hide_numbers = true,
         open_mapping = [[<c-t>]]
     }, config = true },
-
     {'ThePrimeagen/harpoon', config = true,
         keys = {
       { "<leader>hm", function() require('harpoon.mark').add_file() end, desc = "Harpoon Mark" },
