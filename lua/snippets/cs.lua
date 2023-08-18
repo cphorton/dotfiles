@@ -139,10 +139,10 @@ ls.add_snippets("cs",
         }}
 
         ]],
-                { f(csharp_tools.get_namespace()),
+                { f(csharp_tools.get_namespace),
                     c(1, { t "public", t "internal" }),
                     c(2, { t "", t "static " }),
-                    f(csharp_tools.get_classname()), i(0) }
+                    f(csharp_tools.get_classname), i(0) }
             )
         ),
 
@@ -291,7 +291,7 @@ ls.add_snippets("cs",
             }}
         }}
         ]],
-                { f(csharp_tools.get_namespace()),
+                { f(csharp_tools.get_namespace),
                     c(1, { t "public", t "internal" }),
                     i(2, "MyClass"), i(3, "MyRequestType"), i(4, "MyReturnType"), i(0) }
             )
@@ -370,7 +370,7 @@ ls.add_snippets("cs",
                     }}
                 }}
                 ]],
-                { f(csharp_tools.get_namespace()), i(1,"Index"), i(0) }
+                { f(csharp_tools.get_namespace), i(1,"Index"), i(0) }
             )
         )
 
