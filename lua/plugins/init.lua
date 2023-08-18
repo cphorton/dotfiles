@@ -26,21 +26,19 @@ return {
             filetype_exclude = { "help", "alpha", "dashboard", "neo-tree", "Trouble", "lazy" },
             show_trailing_blankline_indent = false,
             show_current_context = false,
-        },
-        config = function(_, opts)
-            opts = {
                 space_char_blankline = " ",
-                char_highlight_list = {
-                    'RainbowDelimiterRed',
-                    'RainbowDelimiterYellow',
-                    'RainbowDelimiterBlue',
-                    'RainbowDelimiterOrange',
-                    'RainbowDelimiterGreen',
-                    'RainbowDelimiterViolet',
-                    'RainbowDelimiterCyan',
-                }
-            }
-        end
+                -- char_highlight_list = {
+                --     'RainbowDelimiterRed',
+                --     'RainbowDelimiterYellow',
+                --     'RainbowDelimiterBlue',
+                --     'RainbowDelimiterOrange',
+                --     'RainbowDelimiterGreen',
+                --     'RainbowDelimiterViolet',
+                --     'RainbowDelimiterCyan',
+                -- }
+
+        },
+        config = true
     },
     {
         "kdheepak/lazygit.nvim",
@@ -50,7 +48,7 @@ return {
         },
     },
     { 'numToStr/Comment.nvim',   lazy = false, event = "VeryLazy", config = true },
-    { "lewis6991/gitsigns.nvim", config = true },
+    { "lewis6991/gitsigns.nvim", config = true, event = "VeryLazy" },
     {
         "akinsho/toggleterm.nvim",
         version = "*",
