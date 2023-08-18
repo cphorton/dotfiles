@@ -14,32 +14,7 @@ return {
 
         }
     },
-    {
-        "lukas-reineke/indent-blankline.nvim",
-        dependencies = {
-            "HiPhish/rainbow-delimiters.nvim",
-        },
-        event = { "BufReadPost", "BufNewFile" },
-        opts = {
-            -- char = "▏",
-            char = "│",
-            filetype_exclude = { "help", "alpha", "dashboard", "neo-tree", "Trouble", "lazy" },
-            show_trailing_blankline_indent = false,
-            show_current_context = false,
-                space_char_blankline = " ",
-                -- char_highlight_list = {
-                --     'RainbowDelimiterRed',
-                --     'RainbowDelimiterYellow',
-                --     'RainbowDelimiterBlue',
-                --     'RainbowDelimiterOrange',
-                --     'RainbowDelimiterGreen',
-                --     'RainbowDelimiterViolet',
-                --     'RainbowDelimiterCyan',
-                -- }
 
-        },
-        config = true
-    },
     {
         "kdheepak/lazygit.nvim",
         -- optional for floating window border decoration
