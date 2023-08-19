@@ -18,6 +18,11 @@ set.termguicolors = true
 set.ignorecase = true
 set.smartcase = true
 
+set.autoindent = true
+set.smartindent = true
+
 
 set.relativenumber = true
 set.cursorline = true
+
+set.clipboard = 'unnamedplus'

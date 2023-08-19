@@ -13,111 +13,115 @@ local rep = require("luasnip.extras").rep
 local scan = require("plenary.scandir")
 local path = require("plenary.path")
 
-local function get_csproj_file()
-    --Find csproj files upward
-    local projectFiles = vim.fs.find(function(name, _)
-       return name:match('.*%.csproj$') end,
-    {
-       upward = true,
-       stop = vim.loop.os_homedir(),
-       path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
-    })
+local csharp_tools = require("util.csharp-tools")
 
-    --Check to see if we find any
-    if next(projectFiles) == nil then
-        return ""
-    end
 
-    return projectFiles[1]
-end
+-- local function get_csproj_file()
+--     --Find csproj files upward
+--     local projectFiles = vim.fs.find(function(name, _)
+--        return name:match('.*%.csproj$') end,
+--     {
+--        upward = true,
+--        stop = vim.loop.os_homedir(),
+--        path = vim.fs.dirname(vim.api.nvim_buf_get_name(0)),
+--     })
+--
+--     --Check to see if we find any
+--     if next(projectFiles) == nil then
+--         return ""
+--     end
+--
+--     return projectFiles[1]
+-- end
 
 local accessModifiers = { t "public", t "private", t "protected", t "internal", t "protected internal",
     t "private protected" }
 
 
-local get_folder = function(file_path)
+-- local get_folder = function(file_path)
+--
+--     local sep = path.path.sep
+--     local idx = file_path:match('^.*()'..sep) - 1
+--
+--     return file_path:sub(1,idx)
+--
+-- end
+--
+-- local get_csproj_name = function()
+--
+--     local csproj_path = get_csproj_file()
+--     local sep = path.path.sep
+--
+--     local index = csproj_path:match('^.*()'..sep) + 1
+--
+--     local  proj_name = csproj_path:sub(index)
+--     
+--     if (proj_name ~= nil) then
+--         return proj_name
+--     end
+--
+--     return ""
+-- end
 
-    local sep = path.path.sep
-    local idx = file_path:match('^.*()'..sep) - 1
+-- local get_namespace = function()
+--     return f(function()
+--         --local path = vim.fn.expand('%:h')
+--
+--         local buffer_path = vim.api.nvim_buf_get_name(0)
+--
+--         -- print ("Buffer path: "..get_folder(buffer_path))
+--
+--
+--         local csproj_file = get_csproj_file()
+--
+--         local project_path = get_folder(get_csproj_file())
+--
+--         -- print("Project path: "..project_path)
+--
+--
+--         local csproj_name = get_csproj_name():gsub(".csproj","")
+--
+--         -- print("Full file: "..csproj_file)
+--
+--         -- print("Full path: "..buffer_path)
+--
+--         -- print("Projct name: "..csproj_name)
+--
+--         local namespace_path = buffer_path:gsub(project_path,"")
+--
+--         -- print("Namespace path: "..namespace_path)
+--
+--         local sep = path.path.sep
+--         -- if (namespace_path:find(sep, 1, true) == 1) then
+--         --     namespace_path = namespace_path:sub((sep:len() + 1))
+--         -- end
+--
+--         namespace_path = csproj_name..get_folder(namespace_path)
+--
+--
+--         --swap out slashes for '.'
+--         --local namespace = buffer_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
+--         --local namespace = namespace_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
+--         local namespace = namespace_path:gsub(sep,".")
+--
+--         if (namespace == ".") then
+--             return csproj_name
+--         end
+--
+--
+--         return namespace
+--     end
+--     )
+-- end
+--
+-- local get_classname = function()
+--     return f(function()
+--         --get the name of the current file
 
-    return file_path:sub(1,idx)
-
-end
-
-local get_csproj_name = function()
-
-    local csproj_path = get_csproj_file()
-    local sep = path.path.sep
-
-    local index = csproj_path:match('^.*()'..sep) + 1
-
-    local  proj_name = csproj_path:sub(index)
-    
-    if (proj_name ~= nil) then
-        return proj_name
-    end
-
-    return ""
-end
-
-local get_namespace = function()
-    return f(function()
-        --local path = vim.fn.expand('%:h')
-
-        local buffer_path = vim.api.nvim_buf_get_name(0)
-
-        -- print ("Buffer path: "..get_folder(buffer_path))
-
-
-        local csproj_file = get_csproj_file()
-
-        local project_path = get_folder(get_csproj_file())
-
-        -- print("Project path: "..project_path)
-
-
-        local csproj_name = get_csproj_name():gsub(".csproj","")
-
-        -- print("Full file: "..csproj_file)
-
-        -- print("Full path: "..buffer_path)
-
-        -- print("Projct name: "..csproj_name)
-
-        local namespace_path = buffer_path:gsub(project_path,"")
-
-        -- print("Namespace path: "..namespace_path)
-
-        local sep = path.path.sep
-        -- if (namespace_path:find(sep, 1, true) == 1) then
-        --     namespace_path = namespace_path:sub((sep:len() + 1))
-        -- end
-
-        namespace_path = csproj_name..get_folder(namespace_path)
-
-
-        --swap out slashes for '.'
-        --local namespace = buffer_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
-        --local namespace = namespace_path:gsub(csproj_file,""):gsub("/","."):gsub("\\",".")
-        local namespace = namespace_path:gsub(sep,".")
-
-        if (namespace == ".") then
-            return csproj_name
-        end
-
-
-        return namespace
-    end
-    )
-end
-
-local get_classname = function()
-    return f(function()
-        --get the name of the current file
-        return vim.fn.expand('%:t:r')
-    end
-    )
-end
+--         return vim.fn.expand('%:t:r')
+--     end
+--     )
+-- end
 
 ls.add_snippets("cs",
     {
@@ -135,10 +139,10 @@ ls.add_snippets("cs",
         }}
 
         ]],
-                { get_namespace(),
+                { f(csharp_tools.get_namespace),
                     c(1, { t "public", t "internal" }),
                     c(2, { t "", t "static " }),
-                    get_classname(), i(0) }
+                    f(csharp_tools.get_classname), i(0) }
             )
         ),
 
@@ -287,7 +291,7 @@ ls.add_snippets("cs",
             }}
         }}
         ]],
-                { get_namespace(),
+                { f(csharp_tools.get_namespace),
                     c(1, { t "public", t "internal" }),
                     i(2, "MyClass"), i(3, "MyRequestType"), i(4, "MyReturnType"), i(0) }
             )
@@ -366,7 +370,7 @@ ls.add_snippets("cs",
                     }}
                 }}
                 ]],
-                { get_namespace(), i(1,"Index"), i(0) }
+                { f(csharp_tools.get_namespace), i(1,"Index"), i(0) }
             )
         )
 
