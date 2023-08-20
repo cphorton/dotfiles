@@ -10,7 +10,9 @@ return {
       -- Full path to current file (see :help expand())
     return {
       cmd = { "dotnet" },
-      args = { "build", csproj_file },
+      --/nologo & /clp:NoSummary are to prevent duplicate error lines
+      --being returned and parsed
+      args = { "build", csproj_file, "/nologo", "/clp:NoSummary" },
       components = {
           --automatically show quickfix 
           {"on_output_quickfix", open = true },

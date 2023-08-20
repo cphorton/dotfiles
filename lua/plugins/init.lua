@@ -14,7 +14,14 @@ return {
 
         }
     },
-
+    -- {
+    --     'goolord/alpha-nvim',
+    --     event = "VimEnter",
+    --     dependencies = { 'nvim-tree/nvim-web-devicons' },
+    --     config = function()
+    --         require 'alpha'.setup(require 'alpha.themes.startify'.config)
+    --     end
+    -- },
     {
         "kdheepak/lazygit.nvim",
         -- optional for floating window border decoration
@@ -22,7 +29,7 @@ return {
             "nvim-lua/plenary.nvim",
         },
     },
-    { 'numToStr/Comment.nvim',   lazy = false, event = "VeryLazy", config = true },
+    { 'numToStr/Comment.nvim',   lazy = false,  event = "VeryLazy", config = true },
     { "lewis6991/gitsigns.nvim", config = true, event = "VeryLazy" },
     {
         "akinsho/toggleterm.nvim",
