@@ -25,5 +25,5 @@ set.smartindent = true
 set.relativenumber = true
 set.cursorline = true
 
-set.clipboard = 'unnamedplus'
+--set.clipboard = 'unnamedplus'
 set.colorcolumn = '120'

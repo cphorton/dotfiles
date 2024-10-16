@@ -9,6 +9,10 @@ return {
     },
     config = function()
         local icons = require("config.icons").icons
+        
+        local lspconfig = require("lspconfig")
+
+        local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
         vim.diagnostic.config({
             --Set virtual text to only show foor warnings and above
