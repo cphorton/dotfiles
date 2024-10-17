@@ -12,6 +12,27 @@ return {
                 }
             end
 
+            local icons = require("config.icons").icons
+
+            --Setup autocommand to allow closing of DAP hover using "q" or "esc"
+            vim.api.nvim_create_autocmd("FileType", {
+                pattern = "dap-float",
+                callback = function()
+                    vim.api.nvim_buf_set_keymap(0, "n", "q", "<cmd>close!<CR>", { noremap = true, silent = true })
+                end
+            })
+
+            vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
+
+            for name, sign in pairs(icons.dap) do
+                sign = type(sign) == "table" and sign or { sign }
+                vim.fn.sign_define(
+                    "Dap" .. name,
+                    { text = sign[1], texthl = sign[2] or "DiagnosticInfo", linehl = sign[3], numhl = sign[3] }
+                )
+            end
+
+
             local dotnet = require("easy-dotnet")
             local debug_dll = nil
             local function ensure_dll()
@@ -57,27 +78,30 @@ return {
         end,
 
         keys = {
-            { "<leader>dB", function() require("dap").set_breakpoint(vim.fn.input('Breakpoint condition: ')) end,
-                desc = "Breakpoint Condition" },
+            {
+                "<leader>dB",
+                function() require("dap").set_breakpoint(vim.fn.input('Breakpoint condition: ')) end,
+                desc = "Breakpoint Condition"
+            },
             { "<leader>db", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
-            { "<leader>dc", function() require("dap").continue() end, desc = "Continue" },
-            { "<F5>",       function() require("dap").continue() end, desc = "Continue" },
-            { "<leader>dC", function() require("dap").run_to_cursor() end, desc = "Run to Cursor" },
-            { "<leader>dg", function() require("dap").goto_() end, desc = "Go to line (no execute)" },
-            { "<leader>di", function() require("dap").step_into() end, desc = "Step Into" },
-            { "<F11>",      function() require("dap").step_into() end, desc = "Step Into" },
-            { "<leader>dj", function() require("dap").down() end, desc = "Down" },
-            { "<leader>dk", function() require("dap").up() end, desc = "Up" },
-            { "<leader>dl", function() require("dap").run_last() end, desc = "Run Last" },
-            { "<leader>do", function() require("dap").step_out() end, desc = "Step Out" },
-            { "<F12>",      function() require("dap").step_out() end, desc = "Step Out" },
-            { "<leader>dO", function() require("dap").step_over() end, desc = "Step Over" },
-            { "<F10>",      function() require("dap").step_over() end, desc = "Step Over" },
-            { "<leader>dp", function() require("dap").pause() end, desc = "Pause" },
-            { "<leader>dr", function() require("dap").repl.toggle() end, desc = "Toggle REPL" },
-            { "<leader>ds", function() require("dap").session() end, desc = "Session" },
-            { "<leader>dt", function() require("dap").terminate() end, desc = "Terminate" },
-            { "<leader>dw", function() require("dap.ui.widgets").hover() end, desc = "Widgets" },
+            { "<leader>dc", function() require("dap").continue() end,          desc = "Continue" },
+            { "<F5>",       function() require("dap").continue() end,          desc = "Continue" },
+            { "<leader>dC", function() require("dap").run_to_cursor() end,     desc = "Run to Cursor" },
+            { "<leader>dg", function() require("dap").goto_() end,             desc = "Go to line (no execute)" },
+            { "<leader>di", function() require("dap").step_into() end,         desc = "Step Into" },
+            { "<F11>",      function() require("dap").step_into() end,         desc = "Step Into" },
+            { "<leader>dj", function() require("dap").down() end,              desc = "Down" },
+            { "<leader>dk", function() require("dap").up() end,                desc = "Up" },
+            { "<leader>dl", function() require("dap").run_last() end,          desc = "Run Last" },
+            { "<leader>do", function() require("dap").step_out() end,          desc = "Step Out" },
+            { "<F12>",      function() require("dap").step_out() end,          desc = "Step Out" },
+            { "<leader>dO", function() require("dap").step_over() end,         desc = "Step Over" },
+            { "<F10>",      function() require("dap").step_over() end,         desc = "Step Over" },
+            { "<leader>dp", function() require("dap").pause() end,             desc = "Pause" },
+            { "<leader>dr", function() require("dap").repl.toggle() end,       desc = "Toggle REPL" },
+            { "<leader>ds", function() require("dap").session() end,           desc = "Session" },
+            { "<leader>dt", function() require("dap").terminate() end,         desc = "Terminate" },
+            { "<leader>dw", function() require("dap.ui.widgets").hover() end,  desc = "Widgets" },
         },
 
 
@@ -165,7 +189,7 @@ return {
         --         end,
         --         desc = "Up",
         --     },
-        --     {
+        --     {require("dapui").float_element
         --         "<leader>dl",
         --         function()
         --             require("dap").run_last()
@@ -223,13 +247,20 @@ return {
         --     },
         -- },
     },
-{
+    {
         "rcarriga/nvim-dap-ui",
-        dependencies = {"mfussenegger/nvim-dap", "nvim-neotest/nvim-nio"},
+        dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
         -- stylua: ignore
         keys = {
-            { "<leader>du", function() require("dapui").toggle({}) end,  desc = "Dap UI" },
-            { "<leader>de", function() require("dapui").eval() end,      desc = "Eval",  mode = { "n", "v" } },
+            { "<leader>du", function() require("dapui").toggle({}) end,                                                       desc = "Dap UI" },
+            { "<leader>de", function()
+                require("dapui").eval()
+                require("dapui").eval()
+            end,                                                                                                              desc = "Eval",            mode = { "n", "v" } },
+            { "<leader>dv", function()
+                require("dapui").float_element('scopes')
+                require("dapui").float_element('scopes')
+            end,                                                                                                              desc = "Local variables", mode = { "n", "v" } },
         },
         opts = {},
         config = function(_, opts)
@@ -246,9 +277,9 @@ return {
                 dapui.close({})
             end
         end,
-    },
-    {
-        "theHamsta/nvim-dap-virtual-text",
-        opts = {},
-    }
+    } --,
+    --{
+    --    "theHamsta/nvim-dap-virtual-text",
+    --    opts = {},
+    --}
 }
