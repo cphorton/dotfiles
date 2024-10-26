@@ -10,7 +10,8 @@ return {
         "hrsh7th/cmp-cmdline",
         "saadparwaiz1/cmp_luasnip",
         "L3MON4D3/LuaSnip",
-        "rafamadriz/friendly-snippets",
+        "L3MON4D3/cmp-luasnip-choice",
+        --"rafamadriz/friendly-snippets",
     },
     config = function()
         local cmp = require("cmp")
@@ -48,6 +49,7 @@ return {
             sources = cmp.config.sources({
                 { name = "nvim_lsp" },
                 { name = "luasnip" }, -- For luasnip users.
+                { name = "cmp-luasnip-choice"}
             }, {
                 { name = "buffer" },
             }),

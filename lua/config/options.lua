@@ -18,8 +18,9 @@ set.termguicolors = true
 set.ignorecase = true
 set.smartcase = true
 
-set.autoindent = true
-set.smartindent = true
+--set.autoindent = true
+--set.smartindent = true
+set.cindent = true
 
 
 set.relativenumber = true

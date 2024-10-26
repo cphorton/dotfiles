@@ -23,6 +23,7 @@ return {
             })
 
             vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
+            vim.api.nvim_set_hl(0, "DapBreakpointLine", { bg = "#3b1119"--[[ , fg = "#c53b53"  ]] })
 
             for name, sign in pairs(icons.dap) do
                 sign = type(sign) == "table" and sign or { sign }
