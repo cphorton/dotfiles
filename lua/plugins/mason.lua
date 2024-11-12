@@ -6,6 +6,10 @@ return {
         build = ":MasonUpdate",
         lazy = false,
         opts = {
+            registries = {
+                'github:mason-org/mason-registry',
+                'github:crashdummyy/mason-registry',
+            },
             pip = {
                 upgrade_pip = true,
             },
