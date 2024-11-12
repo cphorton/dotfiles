@@ -44,6 +44,25 @@ return {
             always_visible = false,
         }
 
+
+        --Show the DAP status
+        --comes from here: https://www.reddit.com/r/neovim/comments/1aseug5/is_it_possible_to_have_a_lualine_indicator_that/
+        local dap_status = {
+            function()
+                return require("dap").status()
+            end,
+            icon = { "", color = { fg = "#e7c664" } }, -- nerd icon.
+            cond = function()
+                if not package.loaded.dap then
+                    return false
+                end
+                local session = require("dap").session()
+                return session ~= nil
+            end,
+        }
+
+
+
         lualine.setup({
             options = {
                 theme = "auto",
@@ -56,7 +75,7 @@ return {
                 lualine_a = { mode },
                 lualine_b = {},
                 lualine_c = { "filename" },
-                lualine_x = { diff, diagnostics, filetype },
+                lualine_x = { diff, diagnostics, filetype, dap_status },
                 lualine_y = {},
                 lualine_z = {},
             },
