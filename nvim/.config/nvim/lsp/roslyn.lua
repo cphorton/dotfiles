@@ -1,27 +1,7 @@
 return {
-    on_attach = function()
-        -- print("This will run when the server attaches!")
-        --
-        -- vim.keymap.set("n", "<leader>p", function()
-        --     local clients = vim.lsp.get_clients()
-        --     for _, value in ipairs(clients) do
-        --         if value.name == "roslyn" then
-        --             vim.notify("roslyn client found")
-        --             value.rpc.request("workspace/diagnostic", { previousResultIds = {} }, function(err, result)
-        --                 if err ~= nil then
-        --                     print(vim.inspect(err))
-        --                 end
-        --                 if result ~= nil then
-        --                     local namespace = vim.api.nvim_create_namespace('whatever')
-        --                     -- vim.diagnostic.set(namespace, 0, result)
-        --                     print(vim.inspect(result))
-        --                 end
-        --             end)
-        --         end
-        --     end
-        -- end, { noremap = true, silent = true })
+    on_attach = function(client)
+        client.server_capabilities.diagnosticProvider = { workspaceDiagnostics = true }
     end,
-
     settings = {
 
         ["csharp|background_analysis"] = {
@@ -46,13 +26,5 @@ return {
             dotnet_enable_references_code_lens = true,
         }
     },
-
-    --cmd = {
-    --          "dotnet",
-    --          "<target>/Microsoft.CodeAnalysis.LanguageServer.dll",
-    --          "--logLevel=Information",
-    --          "--extensionLogDirectory=" .. vim.fs.dirname(vim.lsp.get_log_path()),
-    --          "--stdio",
-    --      },
     filetypes = { 'cs' },
 }
