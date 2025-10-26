@@ -1,4 +1,4 @@
-return {
+local old = {
     "seblyng/roslyn.nvim",
     ft = "cs",
     ---@module 'roslyn.config'
@@ -37,3 +37,5 @@ return {
     --    filewatching = true
     }
 }
+
+return {}

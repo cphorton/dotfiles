@@ -18,7 +18,7 @@ vim.lsp.enable({
   -- lua
   "lua",
   -- csharp
-  "roslyn"
+  -- "roslyn"
  })
 
 local icons = require("config.icons").icons
