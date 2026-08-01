@@ -1,12 +1,33 @@
 return {
   "folke/snacks.nvim",
 ---@type snacks.Config
-  opts = {
-    picker = {},
-    explorer = {},
-    dashboard = { enabled = true },
-    toggle = { enabled = true }
-  },
+  opts = function(_, opts)
+    -- The picker's file previewer reads not-yet-open files with raw
+    -- io.open():lines(), which only splits on "\n" -- a CRLF file keeps the
+    -- trailing "\r" attached to every line (rendered as a literal ^M) and a
+    -- leading UTF-8 BOM shows up as literal <feff>, neither of which Neovim's
+    -- normal :edit path would show (fileformat/BOM are auto-detected there).
+    -- Patch the one choke point all previewers funnel lines through --
+    -- Preview:set_lines -- to strip both before they hit the preview buffer.
+    local Preview = require("snacks.picker.core.preview")
+    local set_lines = Preview.set_lines
+    Preview.set_lines = function(self, lines, offset)
+      for i, line in ipairs(lines) do
+        lines[i] = line:gsub("\r$", "")
+      end
+      if lines[1] then
+        lines[1] = lines[1]:gsub("^\239\187\191", "")
+      end
+      return set_lines(self, lines, offset)
+    end
+
+    return vim.tbl_deep_extend("force", opts, {
+      picker = {},
+      explorer = {},
+      dashboard = { enabled = true },
+      toggle = { enabled = true },
+    })
+  end,
   keys = {
     -- Top Pickers & Explorer
     { "<leader><space>", function() Snacks.picker.smart() end, desc = "Smart Find Files" },
