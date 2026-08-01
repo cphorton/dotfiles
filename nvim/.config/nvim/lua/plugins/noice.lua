@@ -10,6 +10,12 @@ return
       ["vim.lsp.util.stylize_markdown"] = true,
       ["cmp.entry.get_documentation"] = true, -- requires hrsh7th/nvim-cmp
     },
+    -- noice renders its own signature help popup by default (enabled = true), entirely
+    -- independent of ray-x/lsp_signature.nvim (see lua/plugins/lsp-signature.lua) -- the
+    -- two were both showing simultaneously ("two signatures" duplicate popups) with no
+    -- awareness of each other. lsp_signature.nvim owns this now (it supports cycling
+    -- through overloads, which noice's signature view does not), so disable noice's.
+    signature = { enabled = false },
   },
   -- you can enable a preset for easier configuration
   presets = {

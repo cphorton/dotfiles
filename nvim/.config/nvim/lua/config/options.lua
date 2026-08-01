@@ -28,3 +28,5 @@ set.cursorline = true
 
 --set.clipboard = 'unnamedplus'
 set.colorcolumn = '120'
+
+set.foldenable = false

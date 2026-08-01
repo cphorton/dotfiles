@@ -1,5 +1,5 @@
 ---@module "neominimap.config.meta"
-return {
+local config = {
   "Isrothy/neominimap.nvim",
   version = "v3.x.x",
   lazy = false, -- NOTE: NO NEED to Lazy load
@@ -46,3 +46,5 @@ return {
     }
   end,
 }
+
+return{};

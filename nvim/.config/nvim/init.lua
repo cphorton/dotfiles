@@ -17,8 +17,6 @@ vim.api.nvim_create_autocmd("User", {
 vim.lsp.enable({
   -- lua
   "lua",
-  -- csharp
-  "roslyn"
  })
 
 local icons = require("config.icons").icons

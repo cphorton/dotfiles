@@ -12,6 +12,6 @@ return {
     },
     event = "LspAttach",
     opts = {
-        picker = { "snacks" }
+        picker = { "buffer", opts = { hotkeys = true, hotkeys_mode = "sequential" } }
     },
 }
