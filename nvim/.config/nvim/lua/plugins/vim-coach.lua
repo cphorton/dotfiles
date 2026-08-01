@@ -7,6 +7,6 @@ return {
     require("vim-coach").setup()
   end,
   keys = {
-    { "<leader>?", "<cmd>VimCoach<cr>", desc = "Vim Coach" },
+    { "<leader>uh", "<cmd>VimCoach<cr>", desc = "Vim Coach" },
   },
 }

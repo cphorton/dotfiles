@@ -38,7 +38,3 @@ map("n", "<leader>cf", ":lua vim.lsp.buf.format()<CR>", get_opts("(f)ormat"))
 map("n", "<leader>cd", ":lua vim.diagnostic.open_float()<CR>", get_opts("(d)iagnostics"))
 map("n", "<A-Down>", ":lua vim.diagnostic.goto_next()<CR>", get_opts("Next Diagnostic"))
 map("n", "<A-Up>", ":lua vim.diagnostic.goto_prev()<CR>", get_opts("Previous Diagnostic"))
-
-
-
-map("n", "gd", ":lua vim.lsp.buf.definition()<CR>", get_opts("Definitions"))
