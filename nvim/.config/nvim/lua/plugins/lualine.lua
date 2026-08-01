@@ -16,7 +16,7 @@ return {
                 error = icons.diagnostics.Error,
                 hint = icons.diagnostics.Hint,
                 info = icons.diagnostics.Info,
-                warn = icons.diagnostics.Warning,
+                warn = icons.diagnostics.Warn,
             },
             colored = true,
             update_in_insert = false,
