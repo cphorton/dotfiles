@@ -49,6 +49,7 @@ return {
 
         return {
             enable_diagnostics = true,
+            sources = { "filesystem", "buffers", "git_status", "neotree_dotnet" },
             default_component_configs = {
                 git_status = {
                     symbols = {
@@ -70,12 +71,24 @@ return {
                     ['e'] = function() vim.api.nvim_exec('Neotree focus filesystem float', true) end,
                     ['b'] = function() vim.api.nvim_exec('Neotree focus buffers float', true) end,
                     ['g'] = function() vim.api.nvim_exec('Neotree focus git_status float', true) end,
+                    ['d'] = function() vim.api.nvim_exec('Neotree focus dotnet float', true) end,
                     ['p'] = { "toggle_preview", config = { use_float = true, use_image_nvim = true } },
+                }
+            },
+            -- Overrides just the dotnet source's own window mappings; 'a'/'d' still
+            -- mean "add file"/"delete file" everywhere else (filesystem/buffers/git_status).
+            dotnet = {
+                window = {
+                    mappings = {
+                        ['a'] = "add_nuget_package",
+                        ['d'] = "remove_nuget_package",
+                    }
                 }
             }
         }
     end,
     keys = {
         { "<leader>ft", "<cmd>Neotree float reveal<cr>", desc = "Neotree Popup reveal" },
+        { "<leader>fD", "<cmd>Neotree float dotnet<cr>", desc = "Dotnet Solution Explorer" },
     }
 }
