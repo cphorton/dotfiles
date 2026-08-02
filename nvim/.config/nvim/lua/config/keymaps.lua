@@ -36,5 +36,6 @@ map("n", "<leader>ca", ":lua require('tiny-code-action').code_action()<CR>", get
 map("n", "<leader>ch", ":lua vim.lsp.buf.hover()<CR>", get_opts("(h)over"))
 map("n", "<leader>cf", ":lua vim.lsp.buf.format()<CR>", get_opts("(f)ormat"))
 map("n", "<leader>cd", ":lua vim.diagnostic.open_float()<CR>", get_opts("(d)iagnostics"))
+map("n", "<leader>cl", ":lua vim.lsp.codelens.run()<CR>", get_opts("Run Code(l)ens"))
 map("n", "<A-Down>", ":lua vim.diagnostic.goto_next()<CR>", get_opts("Next Diagnostic"))
 map("n", "<A-Up>", ":lua vim.diagnostic.goto_prev()<CR>", get_opts("Previous Diagnostic"))

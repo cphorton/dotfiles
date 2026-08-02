@@ -12,6 +12,8 @@ return -- lazy.nvim
             },
         })
 
+        vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#717171", italic = true })
+
         vim.api.nvim_create_autocmd("BufWritePre", {
             pattern = "*.cs",
             callback = function(args)
