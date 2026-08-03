@@ -267,6 +267,62 @@ local function format_row(label, value)
   return label .. ":" .. string.rep(" ", LABEL_WIDTH - #label + 1) .. value
 end
 
+--- The column a row's value starts at, matching format_row's own padding
+--- scheme -- also where a wrapped continuation line needs to start, so it
+--- lines up underneath.
+local VALUE_COLUMN = LABEL_WIDTH + 2
+
+--- 'linebreak' (see the Preview.show patch below) only wraps at word
+--- boundaries -- it can't hang-indent a wrapped continuation to a *mid-line*
+--- column the way 'breakindent' can to a line's own leading whitespace
+--- (confirmed live via screenshot: a wrapped Tags value's continuation
+--- started flush at column 0, not under the value column -- there's no
+--- Neovim option for "hang-indent to wherever THIS line's content actually
+--- started"). So hard-wrap long values ourselves instead, with continuation
+--- lines given *real* leading spaces up to VALUE_COLUMN, rather than relying
+--- on Neovim to wrap-and-indent a single long logical line. Width is chosen
+--- comfortably below the preview window's typical size (neo-tree caps it at
+--- 120 columns) so a further Neovim-driven soft-wrap on top of ours stays
+--- unlikely in normal use; 'linebreak' is still left on as a fallback for
+--- whatever isn't (e.g. an unusually narrow preview window).
+local VALUE_WRAP_WIDTH = 70
+
+---@param text string
+---@param width integer
+---@return string[] chunks word-wrapped at `width` columns, never splitting a word
+local function wrap_words(text, width)
+  local chunks = {}
+  local line = ""
+  for word in text:gmatch("%S+") do
+    local candidate = line == "" and word or (line .. " " .. word)
+    if #candidate > width and line ~= "" then
+      table.insert(chunks, line)
+      line = word
+    else
+      line = candidate
+    end
+  end
+  if line ~= "" then
+    table.insert(chunks, line)
+  end
+  return chunks
+end
+
+---@param label string
+---@param value string
+---@return string[] lines one or more -- more than one if `value` needed wrapping
+local function format_row_wrapped(label, value)
+  local chunks = wrap_words(value, VALUE_WRAP_WIDTH)
+  if #chunks == 0 then
+    chunks = { "" }
+  end
+  local out = { format_row(label, chunks[1]) }
+  for i = 2, #chunks do
+    table.insert(out, string.rep(" ", VALUE_COLUMN) .. chunks[i])
+  end
+  return out
+end
+
 ---@param node neotree_dotnet.Node
 ---@param pkg easy-dotnet.Nuget.PackageMetadata
 ---@return string[] lines
@@ -277,8 +333,8 @@ local function format_package_details(node, pkg)
 
   local function row(label, value)
     if value and value ~= "" then
-      table.insert(lines, format_row(label, value))
-      table.insert(label_lines, #lines)
+      table.insert(label_lines, #lines + 1) -- the label is only on the row's first line
+      vim.list_extend(lines, format_row_wrapped(label, value))
     end
   end
 
