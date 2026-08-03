@@ -76,7 +76,7 @@ end
 ---@field path string
 ---@field type "directory"|"file"
 ---@field children neotree_dotnet.Node[]
----@field extra? { dotnet_kind: "solution"|"project"|"dependencies"|"packages_group"|"projects_group"|"package"|"project_ref", csproj_name?: string, package_name?: string }
+---@field extra? { dotnet_kind: "solution"|"project"|"dependencies"|"packages_group"|"projects_group"|"package"|"project_ref", csproj_name?: string, package_name?: string, installed_version?: string }
 
 --- Pulls attributes out of a single tag's opening `<Tag ...>` (self-closing or
 --- not) without needing a real XML parser -- fine for the well-formed,
@@ -192,7 +192,7 @@ local function build_dependencies_node(project, cpm_versions)
         path = project.path,
         type = "file",
         children = {},
-        extra = { dotnet_kind = "package", package_name = pkg.name },
+        extra = { dotnet_kind = "package", package_name = pkg.name, installed_version = pkg.version },
       })
     end
     table.insert(groups, {

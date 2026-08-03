@@ -77,6 +77,13 @@ return {
             },
             -- Overrides just the dotnet source's own window mappings; 'a'/'d' still
             -- mean "add file"/"delete file" everywhere else (filesystem/buffers/git_status).
+            -- 'p' deliberately isn't overridden here -- the global toggle_preview
+            -- mapping above already reaches package-aware previewing, since
+            -- neotree_dotnet.commands patches neo-tree's own Preview.show (not
+            -- just the toggle_preview command) to special-case package nodes.
+            -- See that patch's doc comment for why it has to be Preview.show
+            -- specifically: neo-tree's cursor-moved auto-refresh calls that
+            -- directly, bypassing whatever's bound to 'p' entirely.
             dotnet = {
                 window = {
                     mappings = {

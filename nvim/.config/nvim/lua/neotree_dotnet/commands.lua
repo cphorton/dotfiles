@@ -205,6 +205,405 @@ local function is_version_picker(params)
   return type(params.prompt) == "string" and params.prompt:match("^Pick version") ~= nil
 end
 
+--- A package leaf's node.path is its *owning project's* .csproj (see
+--- lib/solution.lua -- there's no on-disk file that "is" the package), so
+--- neo-tree's default preview (`vim.fn.bufadd(node.path)`) would just show
+--- that shared, not-package-specific file -- identical for every package
+--- under one project. Preview.show() in neo-tree's own preview.lua already
+--- has an escape hatch for exactly this: `extra.bufnr or
+--- vim.fn.bufadd(path)` -- if node.extra.bufnr is set, it's used directly
+--- and node.path is never consulted. So the fix doesn't touch Preview at
+--- all: just populate that field, from easy-dotnet's own NuGet search RPC
+--- (client.nuget:nuget_search -- the same one powering its add-package
+--- search picker), before delegating to the real toggle_preview.
+---
+--- One persistent buffer per package name (not a fresh one per keypress) so
+--- repeated toggling reuses it instead of leaking scratch buffers, and a
+--- cache alongside it so re-previewing an already-fetched package is instant
+--- and doesn't re-hit the network. `nuget_search` is a *search*, not an
+--- exact-id lookup -- there's no "get one package by id" RPC -- so results
+--- are filtered for an exact (case-insensitive) id match; NuGet ids are
+--- case-insensitive-canonical, so exact-match-ignoring-case is correct, not
+--- just a good-enough heuristic.
+local package_preview_bufs = {}
+--- name -> nil (never fetched) | "pending" | { lines: string[], label_lines: integer[] }
+--- (label_lines are 1-based indices into `lines` -- see format_package_details)
+local package_details_cache = {}
+
+local function split_lines(text)
+  return vim.split((text:gsub("\r\n", "\n")), "\n", { plain = true })
+end
+
+--- Tried markdown for this (a `**Label:**` bold-line format, then a pipe
+--- table, both rendered via render-markdown.nvim) and dropped both: the
+--- bold-line format's `**` markers stayed visible as literal text no matter
+--- what (render-markdown.nvim deliberately doesn't touch inline emphasis at
+--- all -- confirmed by reading its source, no "bold"/"strong" handling
+--- anywhere in it), and the table version broke visually the moment any
+--- cell's content was long enough to soft-wrap (confirmed live: a long
+--- License URL) -- table borders are virt_text overlaying one specific
+--- buffer line each, so a wrapped continuation just spills out underneath
+--- with no border at all. Plain aligned text sidesteps both: pad every
+--- label out to the same fixed width so the value column lines up
+--- regardless of which fields a given package happens to have (not just the
+--- longest label *present* -- that would shift the column depending on
+--- which fields are missing as you move between packages), and if a long
+--- value wraps, it's just an ordinary wrapped line, nothing to misalign.
+--- Labels get bolded/underlined via our own extmarks instead of markdown
+--- syntax -- see the Preview.show patch below for why that has to happen on
+--- neo-tree's real internal preview buffer, not this one.
+local LABEL_WIDTH = 12 -- longest label below ("Dependencies")
+
+local PREVIEW_NS = vim.api.nvim_create_namespace("neotree_dotnet_preview")
+--- `default = true` so a user's own colorscheme/config can still override
+--- these without us clobbering it back on every reload.
+vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewTitle", { link = "Title", default = true })
+vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewLabel", { bold = true, default = true })
+
+---@param label string
+---@param value string
+---@return string
+local function format_row(label, value)
+  return label .. ":" .. string.rep(" ", LABEL_WIDTH - #label + 1) .. value
+end
+
+---@param node neotree_dotnet.Node
+---@param pkg easy-dotnet.Nuget.PackageMetadata
+---@return string[] lines
+---@return integer[] label_lines 1-based indices into `lines` of "Label:    value" rows
+local function format_package_details(node, pkg)
+  local lines = { pkg.title or pkg.id, "" }
+  local label_lines = {}
+
+  local function row(label, value)
+    if value and value ~= "" then
+      table.insert(lines, format_row(label, value))
+      table.insert(label_lines, #lines)
+    end
+  end
+
+  local installed = node.extra.installed_version
+  if installed and installed ~= pkg.version then
+    row("Installed", installed)
+    row("Latest", pkg.version)
+  else
+    row("Version", pkg.version)
+  end
+  row("Downloads", pkg.downloadCount and tostring(pkg.downloadCount) or nil)
+  row("Authors", pkg.authors)
+  row("Tags", pkg.tags and #pkg.tags > 0 and table.concat(pkg.tags, ", ") or nil)
+  row("Project", pkg.projectUrl)
+  row("License", pkg.licenseUrl)
+
+  local body = pkg.description
+  if not body or body == "" then
+    body = pkg.summary
+  end
+  if body and body ~= "" then
+    table.insert(lines, "")
+    vim.list_extend(lines, split_lines(body))
+  end
+
+  return lines, label_lines
+end
+
+--- Dependencies aren't in easy-dotnet's own NuGet metadata at all -- its
+--- `nuget_search` RPC (confirmed by reading its Lua type annotation AND the
+--- RPC-facing layer of easy-dotnet's own bundled server DLLs, `strings`-
+--- searched for "DependencyGroup"/"PackageDependency": nothing) only
+--- surfaces id/version/authors/description/tags/downloads/urls -- the
+--- underlying NuGet.Protocol/NuGet.Packaging libraries it bundles fully
+--- support dependency groups, easy-dotnet's own application layer just
+--- doesn't ask for or forward them. So this bypasses easy-dotnet's server
+--- and queries nuget.org directly instead, for this one piece of data only.
+---
+--- Uses the flat-container `.nuspec` endpoint
+--- (`v3-flatcontainer/{id}/{version}/{id}.nuspec`, NuGet's documented
+--- "PackageBaseAddress/3.0.0" resource -- verified live against the real
+--- API) rather than the registration/catalog API: the registration index is
+--- paginated for packages with many versions (some pages are inline, others
+--- are just a URL to a separate blob needing a second fetch), while the
+--- flat-container nuspec is one deterministic, always-inline URL per
+--- package+version -- no pagination logic needed. Confirmed live against
+--- real packages that dependency groups can be empty for some target
+--- frameworks (self-closing `<group targetFramework="net6.0" />`, e.g.
+--- Serilog on net5.0+ once a dependency became part of the runtime) --
+--- results are deduped and sorted across all target frameworks into one
+--- flat list, since a compact preview has no good place for a full
+--- per-framework breakdown and most packages' framework-specific
+--- dependency sets differ only by which runtime-provided pieces are needed.
+---
+--- Only ever attempted for packages actually resolved from nuget.org itself
+--- (checked via the search result's own `source` field) -- explicit user
+--- requirement: querying nuget.org directly for a package that actually
+--- came from a private/internal feed would be wrong or simply return
+--- nothing, so skip it entirely rather than show misleading data.
+---
+--- Version too, not just the id -- nuget.org's own package page shows each
+--- dependency as "Id (>= version)" (confirmed live from a screenshot), and
+--- that range is genuinely useful info, not just decoration. Extracts each
+--- `<dependency .../>` tag's full attribute text and pulls `id`/`version`
+--- back out of *that*, the same two-step `get_attr`-style approach
+--- lib/solution.lua already uses for `.csproj` parsing, rather than
+--- assuming attribute order in one combined pattern -- NuGet always emits
+--- id-then-version in practice, but there's no reason to depend on that.
+---@param id string
+---@param version string
+---@param cb fun(dependencies: { id: string, version: string }[]?) nil on
+---  any failure (network, timeout, not found, no curl) -- always fails
+---  silently, never errors
+local function fetch_nuget_dependencies(id, version, cb)
+  local url = string.format("https://api.nuget.org/v3-flatcontainer/%s/%s/%s.nuspec", id:lower(), version:lower(), id:lower())
+  local function get_attr(attrs, attr_name)
+    return attrs:match(attr_name .. '%s*=%s*"([^"]*)"')
+  end
+  local ok = pcall(vim.system, { "curl", "-s", "-f", "--max-time", "5", url }, { text = true }, function(result)
+    vim.schedule(function()
+      if result.code ~= 0 or not result.stdout or result.stdout == "" then
+        cb(nil)
+        return
+      end
+      local seen, deps = {}, {}
+      for attrs in result.stdout:gmatch("<dependency%s+(.-)%s*/?>") do
+        local dep_id = get_attr(attrs, "id")
+        if dep_id and not seen[dep_id] then
+          seen[dep_id] = true
+          table.insert(deps, { id = dep_id, version = get_attr(attrs, "version") })
+        end
+      end
+      table.sort(deps, function(a, b)
+        return a.id < b.id
+      end)
+      cb(deps)
+    end)
+  end)
+  if not ok then
+    cb(nil)
+  end
+end
+
+--- Matches nuget.org's own package page convention (confirmed live from a
+--- screenshot): a plain minimum version shows as "Id (>= version)"; a nuspec
+--- `version` attribute can rarely already be a full range expression like
+--- "[1.0.0,2.0.0)" instead of a bare minimum -- shown as-is in that case
+--- rather than wrapping something that isn't a bare version in ">= (...)".
+---@param dep { id: string, version: string? }
+---@return string
+local function format_dependency_constraint(dep)
+  if not dep.version or dep.version == "" then
+    return dep.id
+  end
+  if dep.version:match("^[%[%(]") then
+    return dep.id .. " " .. dep.version
+  end
+  return dep.id .. " (>= " .. dep.version .. ")"
+end
+
+--- The buffer we set here is a snapshot copy inside neo-tree's floating
+--- preview (see preview.lua's setBuffer -- it copies lines in rather than
+--- displaying this buffer directly), so it needs an explicit Preview.show()
+--- refresh to actually become visible -- but only if the user is still
+--- looking at this same package, not whatever they've moved on to since the
+--- fetch (there are now two of these in flight per package: the main NuGet
+--- search, and the separate nuget.org dependency lookup below).
+---@param state table
+---@param name string package name the fetch that just resolved was for
+local function refresh_package_preview_if_focused(state, name)
+  local Preview = require("neo-tree.sources.common.preview")
+  if not Preview.is_active() then
+    return
+  end
+  local current = state.tree:get_node()
+  if current and current.extra and current.extra.dotnet_kind == "package" and current.extra.package_name == name then
+    Preview.show(state)
+  end
+end
+
+---@param node neotree_dotnet.Node
+---@param state table
+---@return integer bufnr
+local function ensure_package_preview_buf(node, state)
+  local name = node.extra.package_name
+  local bufnr = package_preview_bufs[name]
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
+    bufnr = vim.api.nvim_create_buf(false, true)
+    vim.bo[bufnr].buftype = "nofile"
+    package_preview_bufs[name] = bufnr
+  end
+
+  local cached = package_details_cache[name]
+  if cached == "pending" then
+    return bufnr
+  elseif cached then
+    vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, cached.lines)
+    return bufnr
+  end
+
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Fetching details for " .. name .. " from NuGet..." })
+  package_details_cache[name] = "pending"
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client.nuget:nuget_search(name, nil, function(results)
+      local match
+      for _, pkg in ipairs(results or {}) do
+        if pkg.id:lower() == name:lower() then
+          match = pkg
+          break
+        end
+      end
+
+      local lines, label_lines
+      if match then
+        lines, label_lines = format_package_details(node, match)
+      else
+        lines, label_lines = { "No NuGet metadata found for " .. name .. "." }, {}
+      end
+      package_details_cache[name] = { lines = lines, label_lines = label_lines }
+      if not vim.api.nvim_buf_is_valid(bufnr) then
+        return
+      end
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+      refresh_package_preview_if_focused(state, name)
+
+      local from_nuget_org = match and match.source and match.source:lower():find("nuget.org", 1, true) ~= nil
+      if match and from_nuget_org then
+        fetch_nuget_dependencies(match.id, match.version, function(deps)
+          if not (deps and #deps > 0) then
+            return -- private/internal feed, network failure, or genuinely no deps -- leave the preview as-is
+          end
+          local current_cache = package_details_cache[name]
+          if type(current_cache) ~= "table" then
+            return -- e.g. the buffer got torn down or recached in the meantime
+          end
+          table.insert(current_cache.lines, "")
+          table.insert(current_cache.lines, "Dependencies:")
+          table.insert(current_cache.label_lines, #current_cache.lines)
+          for _, dep in ipairs(deps) do
+            table.insert(current_cache.lines, "  " .. format_dependency_constraint(dep))
+          end
+          if not vim.api.nvim_buf_is_valid(bufnr) then
+            return
+          end
+          vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, current_cache.lines)
+          refresh_package_preview_if_focused(state, name)
+        end)
+      end
+    end)
+  end)
+
+  return bufnr
+end
+
+--- Patching the *command* (toggle_preview) isn't enough on its own: once a
+--- preview is open, neo-tree's preview.lua registers its own VIM_CURSOR_MOVED
+--- handler (inside Preview.toggle) that calls Preview.show(state) directly
+--- on every cursor move, to keep the preview in sync as you navigate the
+--- tree -- entirely bypassing whatever command is bound to 'p' (confirmed
+--- live: preview only ever showed real package details right after pressing
+--- 'p', not when moving to a different package afterward while a preview
+--- was already open -- it kept falling back to the previous node's content/
+--- the shared .csproj). Patch Preview.show itself instead, once, so both
+--- entry points (the initial keypress *and* every subsequent cursor-move
+--- auto-refresh) go through it. This is safe to leave patched permanently
+--- for the whole session, unlike wrap_picker_handler's temporary per-command
+--- wrap/unwrap above: Preview.show is a stable, always-available function,
+--- not a one-shot RPC callback, and the dotnet_kind == "package" guard means
+--- it's a pure no-op for every other neo-tree source's nodes (they never
+--- have that field). Patching the *module table's* field, not a captured
+--- reference, is what makes this work at all: neo-tree's own internal calls
+--- (`Preview.show(state)` inside preview.lua) do a plain field lookup on
+--- that same local `Preview` table on every call -- since `require(...)`
+--- returns that identical table object, reassigning this field from outside
+--- is visible to those internal calls too. (Contrast wrap_picker_handler's
+--- comment above: that had to patch one layer deeper specifically because
+--- rpc-client.lua's dispatch table captures a function *value* once, not a
+--- live field lookup -- Preview.toggle/show have no such captured-copy step.)
+--- The label/title highlighting has to be applied here, not inside
+--- format_package_details/ensure_package_preview_buf above, because
+--- extmarks don't survive the trip: neo-tree's floating preview shows a
+--- *copy* of our buffer's lines inside its own internally-created scratch
+--- buffer (setBuffer's float branch copies text via nvim_buf_get/set_lines
+--- -- confirmed by reading it directly), and extmarks are buffer-local
+--- metadata, not part of the copied text, so anything set on our own source
+--- buffer (node.extra.bufnr) would simply never appear in the window the
+--- user actually sees.
+---
+--- Reach into that real internal buffer directly instead. neo-tree's
+--- preview.lua never exposes it any other way (`instance` is a private
+--- local, not on the returned module table) except indirectly through
+--- Preview.focus(), which internally does `vim.fn.win_gotoid(instance.winid)`
+--- -- call it, read whatever window became current, then immediately
+--- restore focus so this is invisible to the user (doesn't move the real
+--- cursor, doesn't fire CursorMoved, so it doesn't re-trigger the
+--- auto-refresh handler this whole thing lives next to).
+---@return integer? bufnr
+---@return integer? winid
+local function real_preview_buf()
+  local Preview = require("neo-tree.sources.common.preview")
+  if not Preview.is_active() then
+    return nil
+  end
+  local before = vim.api.nvim_get_current_win()
+  Preview.focus()
+  local winid = vim.api.nvim_get_current_win()
+  if winid == before then
+    return nil
+  end
+  local bufnr = vim.api.nvim_win_get_buf(winid)
+  vim.api.nvim_set_current_win(before)
+  return bufnr, winid
+end
+
+---@param bufnr integer the real internal preview buffer, from real_preview_buf()
+---@param winid integer the real internal preview window, from real_preview_buf()
+---@param cached { lines: string[], label_lines: integer[] }
+local function highlight_package_preview(bufnr, winid, cached)
+  -- 'wrap' is on by default with 'linebreak' off, which breaks strictly at
+  -- the window edge -- including mid-word (confirmed live: "IMemoryCache"
+  -- split across two lines). 'linebreak' wraps at word boundaries instead,
+  -- without changing the buffer's actual text.
+  vim.wo[winid].linebreak = true
+
+  vim.api.nvim_buf_clear_namespace(bufnr, PREVIEW_NS, 0, -1)
+  if #cached.lines == 0 then
+    return
+  end
+  vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, 0, 0, {
+    end_row = 1,
+    end_col = 0,
+    hl_group = "NeotreeDotnetPreviewTitle",
+  })
+  for _, line in ipairs(cached.label_lines) do
+    local row0 = line - 1
+    local colon = cached.lines[line]:find(":")
+    if colon then
+      vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, row0, 0, {
+        end_col = colon,
+        hl_group = "NeotreeDotnetPreviewLabel",
+      })
+    end
+  end
+end
+
+local preview = require("neo-tree.sources.common.preview")
+local orig_preview_show = preview.show
+preview.show = function(state)
+  local node = state.tree:get_node()
+  local is_package = node and node.extra and node.extra.dotnet_kind == "package"
+  if is_package then
+    node.extra.bufnr = ensure_package_preview_buf(node, state)
+  end
+  orig_preview_show(state)
+  if is_package then
+    local real_buf, real_win = real_preview_buf()
+    local cached = package_details_cache[node.extra.package_name]
+    if real_buf and real_win and type(cached) == "table" then
+      highlight_package_preview(real_buf, real_win, cached)
+    end
+  end
+end
+
 --- Bound to 'a' on the "Packages" node (see lua/plugins/neotree.lua). Opens
 --- easy-dotnet's own add-package flow scoped to the owning project -- its
 --- node.path is that project's .csproj (see lib/solution.lua), same as what
