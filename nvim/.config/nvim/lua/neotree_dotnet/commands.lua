@@ -226,8 +226,7 @@ end
 --- case-insensitive-canonical, so exact-match-ignoring-case is correct, not
 --- just a good-enough heuristic.
 local package_preview_bufs = {}
---- name -> nil (never fetched) | "pending" | { lines: string[], label_lines: integer[] }
---- (label_lines are 1-based indices into `lines` -- see format_package_details)
+--- name -> nil (never fetched) | "pending" | { lines: string[], rows: neotree_dotnet.PreviewRow[] }
 local package_details_cache = {}
 
 local function split_lines(text)
@@ -259,6 +258,28 @@ local PREVIEW_NS = vim.api.nvim_create_namespace("neotree_dotnet_preview")
 --- these without us clobbering it back on every reload.
 vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewTitle", { link = "Title", default = true })
 vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewLabel", { bold = true, default = true })
+--- "Underlined"/"Number" rather than the newer "@markup.link.url"/"@number"
+--- treesitter groups -- both are long-standing standard :h highlight-groups
+--- that essentially every colorscheme defines something for, whereas the
+--- treesitter-capture groups are only reliably populated by colorschemes
+--- that specifically integrate with treesitter, a narrower bet.
+vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewUrl", { link = "Underlined", default = true })
+vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewNumber", { link = "Number", default = true })
+--- Explicit user request: color dependency list entries the same as a
+--- namespace reference in a C# `using` statement, and follow whatever the
+--- active colorscheme does with that, not a fixed color. Linking to `@type`
+--- itself, not the older `Type` group directly, is what makes that literally
+--- true rather than approximately true: confirmed live via a real treesitter
+--- highlights query against an actual `using Asp.Versioning;` line that a
+--- namespace identifier there gets exactly the `@type` capture, and `@type`
+--- is a Neovim-builtin default link (present even in a fresh session with
+--- no C# file ever opened -- confirmed live), so it's always safe to use.
+--- Colorschemes that specifically customize `@type` differently from the
+--- classic `Type` group (some do) get followed correctly this way; the
+--- URL/Number groups above didn't need this distinction since there's no
+--- equally-specific "this is what a NuGet URL/count looks like" precedent
+--- to match against.
+vim.api.nvim_set_hl(0, "NeotreeDotnetPreviewNamespace", { link = "@type", default = true })
 
 ---@param label string
 ---@param value string
@@ -323,33 +344,43 @@ local function format_row_wrapped(label, value)
   return out
 end
 
+---@alias neotree_dotnet.PreviewRow { first: integer, last: integer, kind: "number"|"url"|nil }
+--- `first`/`last` are 1-based indices into `lines` -- more than one line
+--- when the value wrapped. `kind` says which of NeotreeDotnetPreviewNumber/
+--- Url to additionally paint over the *value* portion of every line in that
+--- range (from VALUE_COLUMN onward -- always the same column regardless of
+--- label length or whether it's a wrapped continuation, that's the point of
+--- the alignment scheme); nil means no extra styling beyond the bold label.
+
 ---@param node neotree_dotnet.Node
 ---@param pkg easy-dotnet.Nuget.PackageMetadata
 ---@return string[] lines
----@return integer[] label_lines 1-based indices into `lines` of "Label:    value" rows
+---@return neotree_dotnet.PreviewRow[] rows
 local function format_package_details(node, pkg)
   local lines = { pkg.title or pkg.id, "" }
-  local label_lines = {}
+  local rows = {}
 
-  local function row(label, value)
+  ---@param kind "number"|"url"|nil
+  local function row(label, value, kind)
     if value and value ~= "" then
-      table.insert(label_lines, #lines + 1) -- the label is only on the row's first line
-      vim.list_extend(lines, format_row_wrapped(label, value))
+      local row_lines = format_row_wrapped(label, value)
+      table.insert(rows, { first = #lines + 1, last = #lines + #row_lines, kind = kind })
+      vim.list_extend(lines, row_lines)
     end
   end
 
   local installed = node.extra.installed_version
   if installed and installed ~= pkg.version then
-    row("Installed", installed)
-    row("Latest", pkg.version)
+    row("Installed", installed, "number")
+    row("Latest", pkg.version, "number")
   else
-    row("Version", pkg.version)
+    row("Version", pkg.version, "number")
   end
-  row("Downloads", pkg.downloadCount and tostring(pkg.downloadCount) or nil)
+  row("Downloads", pkg.downloadCount and tostring(pkg.downloadCount) or nil, "number")
   row("Authors", pkg.authors)
   row("Tags", pkg.tags and #pkg.tags > 0 and table.concat(pkg.tags, ", ") or nil)
-  row("Project", pkg.projectUrl)
-  row("License", pkg.licenseUrl)
+  row("Project", pkg.projectUrl, "url")
+  row("License", pkg.licenseUrl, "url")
 
   local body = pkg.description
   if not body or body == "" then
@@ -360,7 +391,7 @@ local function format_package_details(node, pkg)
     vim.list_extend(lines, split_lines(body))
   end
 
-  return lines, label_lines
+  return lines, rows
 end
 
 --- Dependencies aren't in easy-dotnet's own NuGet metadata at all -- its
@@ -509,13 +540,13 @@ local function ensure_package_preview_buf(node, state)
         end
       end
 
-      local lines, label_lines
+      local lines, rows
       if match then
-        lines, label_lines = format_package_details(node, match)
+        lines, rows = format_package_details(node, match)
       else
-        lines, label_lines = { "No NuGet metadata found for " .. name .. "." }, {}
+        lines, rows = { "No NuGet metadata found for " .. name .. "." }, {}
       end
-      package_details_cache[name] = { lines = lines, label_lines = label_lines }
+      package_details_cache[name] = { lines = lines, rows = rows }
       if not vim.api.nvim_buf_is_valid(bufnr) then
         return
       end
@@ -534,10 +565,14 @@ local function ensure_package_preview_buf(node, state)
           end
           table.insert(current_cache.lines, "")
           table.insert(current_cache.lines, "Dependencies:")
-          table.insert(current_cache.label_lines, #current_cache.lines)
+          table.insert(current_cache.rows, { first = #current_cache.lines, last = #current_cache.lines, kind = nil })
+          local dep_lines_first = #current_cache.lines + 1
+          local dep_id_end = {}
           for _, dep in ipairs(deps) do
             table.insert(current_cache.lines, "  " .. format_dependency_constraint(dep))
+            dep_id_end[#current_cache.lines] = 2 + #dep.id -- 2 for the leading indent
           end
+          current_cache.dependency_lines = { first = dep_lines_first, last = #current_cache.lines, id_end = dep_id_end }
           if not vim.api.nvim_buf_is_valid(bufnr) then
             return
           end
@@ -611,9 +646,27 @@ local function real_preview_buf()
   return bufnr, winid
 end
 
+--- Neither of the other two highlighting mechanisms in play here can be
+--- trusted for this: (1) neo-tree's own setBuffer starts a treesitter parser
+--- on `self.bufnr` matching whatever filetype our *source* buffer has (none,
+--- deliberately -- see the module comment above), so it does nothing on its
+--- own; but (2) `self.bufnr` is the *same* persistent scratch buffer reused
+--- across every preview while the float stays open, and once some other
+--- preview attaches a REAL language's parser to it (e.g. previewing a .cs
+--- file first attaches `c_sharp`), that parser doesn't get detached just
+--- because a later preview's content doesn't match it -- confirmed live: a
+--- package preview shown right after a .cs file preview got its numbers and
+--- URLs colored, purely because C#'s grammar happened to parse "6.5.0" as
+--- float literals and "https://..." as starting a `//` line comment. Looked
+--- nice by coincidence for that specific text shape, but it's not ours, not
+--- reliable (varies with whatever was last previewed), and not even
+--- correct (a description containing literal "/*" would silently "comment
+--- out" everything after it). So highlight deliberately and consistently
+--- ourselves instead, every time, via our own extmarks in our own
+--- namespace -- same pattern as the bold labels already use.
 ---@param bufnr integer the real internal preview buffer, from real_preview_buf()
 ---@param winid integer the real internal preview window, from real_preview_buf()
----@param cached { lines: string[], label_lines: integer[] }
+---@param cached { lines: string[], rows: neotree_dotnet.PreviewRow[], dependency_lines: { first: integer, last: integer, id_end: table<integer,integer> }? }
 local function highlight_package_preview(bufnr, winid, cached)
   -- 'wrap' is on by default with 'linebreak' off, which breaks strictly at
   -- the window edge -- including mid-word (confirmed live: "IMemoryCache"
@@ -630,14 +683,67 @@ local function highlight_package_preview(bufnr, winid, cached)
     end_col = 0,
     hl_group = "NeotreeDotnetPreviewTitle",
   })
-  for _, line in ipairs(cached.label_lines) do
-    local row0 = line - 1
-    local colon = cached.lines[line]:find(":")
+
+  local value_hl_groups = { number = "NeotreeDotnetPreviewNumber", url = "NeotreeDotnetPreviewUrl" }
+  for _, r in ipairs(cached.rows) do
+    local first_text = cached.lines[r.first]
+    local colon = first_text:find(":")
     if colon then
-      vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, row0, 0, {
+      vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, r.first - 1, 0, {
         end_col = colon,
         hl_group = "NeotreeDotnetPreviewLabel",
       })
+    end
+
+    local value_hl = r.kind and value_hl_groups[r.kind]
+    if value_hl then
+      -- VALUE_COLUMN is where the value starts on every line in this row's
+      -- range, first line or wrapped continuation alike -- that's the whole
+      -- point of format_row_wrapped's alignment scheme.
+      for line = r.first, r.last do
+        local text = cached.lines[line]
+        if #text > VALUE_COLUMN then
+          vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, line - 1, VALUE_COLUMN, {
+            end_row = line - 1,
+            end_col = #text,
+            hl_group = value_hl,
+          })
+        end
+      end
+    end
+  end
+
+  -- Dependency list entries ("  Id (>= version)") aren't "Label: value" rows
+  -- at all -- see the append site in ensure_package_preview_buf -- so they
+  -- aren't in `cached.rows`. Two spans per line: the package id gets the
+  -- same namespace-reference color as the label rows above, and its version
+  -- constraint gets the same Number color the top Installed/Latest/Downloads
+  -- rows use -- even though it isn't strictly numeric (a pre-release suffix
+  -- like "-beta1", or an exact range like "[1.0.0,2.0.0)", are still
+  -- "version-shaped" text that reads naturally with the same styling as the
+  -- other version numbers in this preview, explicit user request). id_end
+  -- (computed alongside the formatted text, not re-derived by scanning for
+  -- e.g. the first space or paren -- a package id can itself validly
+  -- contain either) marks exactly where the id ends and the constraint
+  -- (if any -- some dependencies have none) begins.
+  if cached.dependency_lines then
+    for line = cached.dependency_lines.first, cached.dependency_lines.last do
+      local text = cached.lines[line]
+      local id_end = cached.dependency_lines.id_end[line]
+      if text and id_end and id_end > 2 then
+        vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, line - 1, 2, {
+          end_row = line - 1,
+          end_col = id_end,
+          hl_group = "NeotreeDotnetPreviewNamespace",
+        })
+      end
+      if text and id_end and #text > id_end then
+        vim.api.nvim_buf_set_extmark(bufnr, PREVIEW_NS, line - 1, id_end, {
+          end_row = line - 1,
+          end_col = #text,
+          hl_group = "NeotreeDotnetPreviewNumber",
+        })
+      end
     end
   end
 end
@@ -653,6 +759,16 @@ preview.show = function(state)
   orig_preview_show(state)
   if is_package then
     local real_buf, real_win = real_preview_buf()
+    if real_buf then
+      -- Undo whatever an *earlier* preview in this same float session might
+      -- have attached (see highlight_package_preview's doc comment) --
+      -- neo-tree's own setBuffer never does this itself, since it has no
+      -- reason to expect a buffer's language to change out from under it.
+      -- Without this, a stale parser doesn't just sit there unused: it
+      -- keeps actively highlighting our new content through the *previous*
+      -- preview's grammar until something explicitly stops it.
+      pcall(vim.treesitter.stop, real_buf)
+    end
     local cached = package_details_cache[node.extra.package_name]
     if real_buf and real_win and type(cached) == "table" then
       highlight_package_preview(real_buf, real_win, cached)
