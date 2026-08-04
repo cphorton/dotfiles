@@ -68,12 +68,31 @@ return {
     -- elsewhere in your config, without redefining it, due to `opts_extend`
     sources = {
       default = { 'lsp', 'easy-dotnet', 'path', 'snippets', 'buffer' },
+        -- nvim-dap sets 'omnifunc' on the REPL buffer to its own completion
+        -- (locals, expression members, etc. from the live debug session),
+        -- but that omnifunc uses Vim's classic *async* completion protocol
+        -- (returns -2, then calls vim.fn.complete() itself later once the
+        -- debug adapter responds). Blink's built-in "omni" source doesn't
+        -- implement that half of the protocol and silently drops those
+        -- results, so real member/expression completions (e.g.
+        -- `forecast[0].` -> TemperatureC) never showed up -- only whatever
+        -- completed synchronously did. `dap_repl` (see
+        -- lua/dap_repl_completion/init.lua) bridges that async protocol
+        -- into blink directly, so "buffer" is no longer needed here.
+        per_filetype = {
+          ["dap-repl"] = { "dap_repl" },
+        },
         providers = {
           ["easy-dotnet"] = {
             name = "easy-dotnet",
             enabled = true,
             module = "easy-dotnet.completion.blink",
             score_offset = 10000,
+            async = true,
+          },
+          dap_repl = {
+            name = "dap_repl",
+            module = "dap_repl_completion",
             async = true,
           },
         },
