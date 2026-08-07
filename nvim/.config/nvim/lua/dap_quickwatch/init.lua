@@ -187,17 +187,25 @@ end
 
 -- Methods that take a lambda but aren't implemented in dncdbg's evaluator
 -- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod/
--- EvaluateLinqSelectMethod in evalstackmachine.cpp -- only
--- Any/All/Count/First/Where/Select are, as of the feat/linq-select-lambda
--- branch). `Where` and `Select` used to be in this list too -- `Where`
--- had been observed to hang indefinitely when evaluated through
--- easy-dotnet's attach-mode proxy, but that turned out to be an unrelated
--- proxy bug (a slow completions request blocking the whole client message
--- pipe, fixed in easy-dotnet-server, not specific to Where) rather than
--- anything about Where itself -- both are now confirmed working live
--- through the real attach-mode flow.
+-- EvaluateLinqSelectMethod/EvaluateLinqSelectManyMethod in
+-- evalstackmachine.cpp -- only Any/All/Count/First/Where/Select/
+-- SelectMany are, as of the feat/linq-selectmany-lambda branch). `Where`
+-- and `Select` used to be in this list too -- `Where` had been observed
+-- to hang indefinitely when evaluated through easy-dotnet's attach-mode
+-- proxy, but that turned out to be an unrelated proxy bug (a slow
+-- completions request blocking the whole client message pipe, fixed in
+-- easy-dotnet-server, not specific to Where) rather than anything about
+-- Where itself -- all three are now confirmed working live through the
+-- real attach-mode flow.
+--
+-- Note: projecting to or filtering an array of a non-primitive value
+-- type (a struct, e.g. DateOnly) fails with a clear dncdbg-side error
+-- for Where/Select/SelectMany -- a real, currently-unresolved CoreCLR-
+-- level limitation (see dncdbg's git log on the feat/linq-select-lambda
+-- branch), not a hang, so it's left to dncdbg's own error rather than
+-- blocked here.
 local UNSUPPORTED_LAMBDA_METHODS = {
-  'SelectMany', 'OrderBy', 'OrderByDescending',
+  'OrderBy', 'OrderByDescending',
   'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
   'Aggregate', 'ForEach',
 }
@@ -286,9 +294,9 @@ function M.reevaluate()
   if unsupported then
     render_tree_lines({
       ('"%s" with a lambda isn\'t supported yet'):format(unsupported),
-      '(only Any/All/Count/First/Where/Select are) -- dncdbg returns a',
-      'clean error for this one, but not sent client-side to save the',
-      'round-trip.',
+      '(only Any/All/Count/First/Where/Select/SelectMany are) -- dncdbg',
+      'returns a clean error for this one, but not sent client-side to',
+      'save the round-trip.',
     })
     return
   end
