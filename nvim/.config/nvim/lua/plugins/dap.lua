@@ -14,6 +14,19 @@ return {
                 end
             })
 
+            -- QuickWatch is two floats (input + tree) that must close together,
+            -- and needs its own "Add Watch" binding -- so it gets its own
+            -- autocmd rather than reusing the single-window "dap-float" one above.
+            vim.api.nvim_create_autocmd("FileType", {
+                pattern = "dap-quickwatch-*",
+                callback = function(args)
+                    local qw = require("dap_quickwatch")
+                    vim.keymap.set("n", "q", qw.close, { buffer = args.buf, silent = true })
+                    vim.keymap.set("n", "<Esc>", qw.close, { buffer = args.buf, silent = true })
+                    vim.keymap.set("n", "<leader>a", qw.add_watch, { buffer = args.buf, silent = true })
+                end
+            })
+
             vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
             vim.api.nvim_set_hl(0, "DapBreakpointLine", { bg = "#3b1119"--[[ , fg = "#c53b53"  ]] })
 
@@ -51,6 +64,7 @@ return {
             { "<leader>ds", function() require("dap").session() end,           desc = "Session" },
             { "<leader>dt", function() require("dap").terminate() end,         desc = "Terminate" },
             { "<leader>di", function() require("dap.ui.widgets").hover() end,  desc = "Inspect" },
+            { "<leader>dQ", function() require("dap_quickwatch").open(vim.fn.expand('<cword>')) end, desc = "QuickWatch" },
         },
     },
     {

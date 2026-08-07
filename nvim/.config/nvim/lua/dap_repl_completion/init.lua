@@ -70,8 +70,16 @@ function Source.new()
   return setmetatable({}, { __index = Source })
 end
 
+-- Any buffer that wants dap.repl's expression/member completion (the
+-- REPL itself, and dap_quickwatch's expression input box) lists its
+-- filetype here.
+local ENABLED_FILETYPES = {
+  ['dap-repl'] = true,
+  ['dap-quickwatch-input'] = true,
+}
+
 function Source:enabled()
-  return vim.bo.filetype == 'dap-repl'
+  return ENABLED_FILETYPES[vim.bo.filetype] == true
 end
 
 function Source:get_trigger_characters()
@@ -94,6 +102,20 @@ function Source:get_completions(context, resolve)
     if my_generation ~= generation then
       -- A newer request superseded this one; don't resolve with stale items.
       return
+    end
+    -- netcoredbg's `completions` request sometimes answers with
+    -- indexer-shaped suggestions ("[0]", "[1]", ...) even when completing
+    -- after a literal "." rather than "[" -- observed for array-typed root
+    -- expressions (e.g. `forecast.` where `forecast` is a `T[]`), which
+    -- apparently don't have a real dot-member list to offer and fall back
+    -- to this instead. Those can never be syntactically valid right after
+    -- a dot, so drop them rather than show completions that don't parse.
+    local trigger_char = context.line:sub(start_col, start_col)
+    if trigger_char == '.' then
+      items = vim.tbl_filter(function(cmp)
+        local text = type(cmp) == 'string' and cmp or cmp.word
+        return text == nil or not text:match('^%[%-?%d+%]$')
+      end, items)
     end
     local range = {
       ['start'] = { line = cur_line - 1, character = start_col },

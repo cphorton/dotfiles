@@ -81,6 +81,13 @@ return {
         -- into blink directly, so "buffer" is no longer needed here.
         per_filetype = {
           ["dap-repl"] = { "dap_repl" },
+          -- Both sources active here: dap_repl (live values, real array
+          -- indices/lengths from the debug adapter) and roslyn_watch
+          -- (real semantic completions -- extension methods, LINQ, generics
+          -- -- from the Roslyn LSP already attached to the source file,
+          -- which the debug adapter can never offer since that requires
+          -- compile-time `using`/overload knowledge, not reflection).
+          ["dap-quickwatch-input"] = { "dap_repl", "roslyn_watch" },
         },
         providers = {
           ["easy-dotnet"] = {
@@ -93,6 +100,12 @@ return {
           dap_repl = {
             name = "dap_repl",
             module = "dap_repl_completion",
+            async = true,
+          },
+          roslyn_watch = {
+            name = "roslyn_watch",
+            module = "roslyn_watch_completion",
+            score_offset = 50,
             async = true,
           },
         },

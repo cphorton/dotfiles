@@ -8,7 +8,25 @@ return -- lazy.nvim
                 auto_refresh_codelens = true,
             },
             debugger = {
+                -- Registers a "easy-dotnet"-adapter config in dap.configurations.cs
+                -- (project picker -> build -> attach, no .vscode/launch.json needed).
+                -- Distinct adapter name from dotnet-debug.nvim's "coreclr" adapter
+                -- (see dotnet-debug.lua), so the two coexist without collision --
+                -- <F5> just works again without hand-writing a launch.json per project.
                 auto_register_dap = true,
+                -- Our own build of dncdbg (github.com/cphorton/dncdbg, a netcoredbg
+                -- fork) at ~/Development/dncdbg, currently on dev/combined-array-fixes
+                -- (merges fix/walkmembers-array-real-members +
+                -- fix/extension-methods-array-receiver). Fixes two real netcoredbg
+                -- bugs that broke dap_quickwatch (and DAP evaluation generally) on
+                -- array-typed expressions: `array.Length`/`array.Rank` never
+                -- resolving, and any method call on an array -- including every
+                -- LINQ method, e.g. `array.First()` -- either hanging (netcoredbg)
+                -- or failing outright (unpatched dncdbg). bin_path takes priority
+                -- over `engine` below (which is otherwise ignored once set), per
+                -- easy-dotnet's own dotnet-client.lua initialize() call.
+                bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
+                engine = "dncdbg",
             },
         })
 
