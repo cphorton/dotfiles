@@ -186,19 +186,18 @@ local function focus_input()
 end
 
 -- Methods that take a lambda but aren't implemented in dncdbg's evaluator
--- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod in
--- evalstackmachine.cpp -- only Any/All/Count/First/Where are, as of the
--- feat/linq-where-lambda branch). `Where` used to be in this list too --
--- it had been observed to hang indefinitely when evaluated through
--- easy-dotnet's attach-mode proxy even though dncdbg itself answered in
--- ~5ms (with a "not supported" error, before it was implemented); root
--- cause was never pinned down in the proxy layer. Now that dncdbg
--- actually implements Where (returning a real array result, not just a
--- fast error), the same proxy path hasn't been re-validated under
--- attach mode specifically -- worth watching for a recurrence there even
--- though it's no longer blocked client-side.
+-- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod/
+-- EvaluateLinqSelectMethod in evalstackmachine.cpp -- only
+-- Any/All/Count/First/Where/Select are, as of the feat/linq-select-lambda
+-- branch). `Where` and `Select` used to be in this list too -- `Where`
+-- had been observed to hang indefinitely when evaluated through
+-- easy-dotnet's attach-mode proxy, but that turned out to be an unrelated
+-- proxy bug (a slow completions request blocking the whole client message
+-- pipe, fixed in easy-dotnet-server, not specific to Where) rather than
+-- anything about Where itself -- both are now confirmed working live
+-- through the real attach-mode flow.
 local UNSUPPORTED_LAMBDA_METHODS = {
-  'Select', 'SelectMany', 'OrderBy', 'OrderByDescending',
+  'SelectMany', 'OrderBy', 'OrderByDescending',
   'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
   'Aggregate', 'ForEach',
 }
@@ -287,9 +286,9 @@ function M.reevaluate()
   if unsupported then
     render_tree_lines({
       ('"%s" with a lambda isn\'t supported yet'):format(unsupported),
-      '(only Any/All/Count/First are) -- not sent, since it has been',
-      'observed to hang indefinitely rather than error cleanly when',
-      'evaluated through the attach-mode debug proxy.',
+      '(only Any/All/Count/First/Where/Select are) -- dncdbg returns a',
+      'clean error for this one, but not sent client-side to save the',
+      'round-trip.',
     })
     return
   end

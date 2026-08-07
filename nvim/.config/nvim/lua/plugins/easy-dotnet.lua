@@ -15,7 +15,7 @@ return -- lazy.nvim
                 -- <F5> just works again without hand-writing a launch.json per project.
                 auto_register_dap = true,
                 -- Our own build of dncdbg (github.com/cphorton/dncdbg, a netcoredbg
-                -- fork) at ~/Development/dncdbg, currently on feat/linq-where-lambda
+                -- fork) at ~/Development/dncdbg, currently on feat/linq-select-lambda
                 -- (builds on dev/combined-array-fixes, which merges
                 -- fix/walkmembers-array-real-members +
                 -- fix/extension-methods-array-receiver). Fixes two real netcoredbg
@@ -25,8 +25,9 @@ return -- lazy.nvim
                 -- LINQ method, e.g. `array.First()` -- either hanging (netcoredbg)
                 -- or failing outright (unpatched dncdbg). Also adds real func-eval
                 -- support for LINQ lambda methods on arrays: Any/All/Count/First
-                -- (scalar results) and Where (materializes a new array via
-                -- ICorDebugEval2::NewParameterizedArray). bin_path takes priority
+                -- (scalar results), Where (filters to a same-typed new array) and
+                -- Select (projects to a differently-typed new array) -- both via
+                -- ICorDebugEval2::NewParameterizedArray. bin_path takes priority
                 -- over `engine` below (which is otherwise ignored once set), per
                 -- easy-dotnet's own dotnet-client.lua initialize() call.
                 bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
