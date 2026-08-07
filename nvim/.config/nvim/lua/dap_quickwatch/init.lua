@@ -76,6 +76,35 @@ local function current_expr()
   return vim.trim(vim.api.nvim_buf_get_lines(state.input_buf, 0, 1, true)[1] or '')
 end
 
+-- Methods that take a lambda but aren't implemented in dncdbg's evaluator
+-- yet (see EvaluateLinqPredicateMethod in evalstackmachine.cpp -- only
+-- Any/All/Count/First are). `Where` specifically has been observed to
+-- hang indefinitely when evaluated through easy-dotnet's attach-mode
+-- proxy, rather than the clean, fast "not supported" error it returns
+-- under direct launch mode -- root cause not fully pinned down (dncdbg
+-- itself answers in ~5ms either way; something in the proxy layer
+-- appears to lose the response specifically for this case). Blocking
+-- these client-side means the request is never sent in the first place,
+-- rather than relying on the timeout below to recover cleanly from a
+-- hang that, empirically, it doesn't always.
+local UNSUPPORTED_LAMBDA_METHODS = {
+  'Where', 'Select', 'SelectMany', 'OrderBy', 'OrderByDescending',
+  'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
+  'Aggregate', 'ForEach',
+}
+
+local function find_unsupported_lambda_method(expr)
+  if not expr:find('=>', 1, true) then
+    return nil
+  end
+  for _, name in ipairs(UNSUPPORTED_LAMBDA_METHODS) do
+    if expr:find('%.' .. name .. '%s*%(') then
+      return name
+    end
+  end
+  return nil
+end
+
 function M.close()
   for _, win in ipairs({ state.input_win, state.tree_win }) do
     if win and vim.api.nvim_win_is_valid(win) then
@@ -97,6 +126,18 @@ function M.reevaluate()
   if not expr or expr == '' then
     return
   end
+
+  local unsupported = find_unsupported_lambda_method(expr)
+  if unsupported then
+    render_tree_lines({
+      ('"%s" with a lambda isn\'t supported yet'):format(unsupported),
+      '(only Any/All/Count/First are) -- not sent, since it has been',
+      'observed to hang indefinitely rather than error cleanly when',
+      'evaluated through the attach-mode debug proxy.',
+    })
+    return
+  end
+
   local session = require('dap').session()
   if not session then
     vim.notify('QuickWatch: no active debug session', vim.log.levels.WARN)
@@ -106,6 +147,9 @@ function M.reevaluate()
   state.eval_generation = (state.eval_generation or 0) + 1
   local my_generation = state.eval_generation
   local done = false
+  -- Captured before the request is sent so the timeout handler below can
+  -- ask the adapter to cancel this specific request if it never answers.
+  local eval_request_seq = session.seq
 
   -- context = "watch" (not "hover"): adapters commonly restrict
   -- side-effecting expressions like method calls under "hover" context
@@ -140,6 +184,18 @@ function M.reevaluate()
   vim.defer_fn(function()
     if done or my_generation ~= state.eval_generation then
       return
+    end
+    -- Ask the adapter to abandon the still-in-flight request (DAP
+    -- `cancel`, per capabilities.supportsCancelRequest) instead of just
+    -- walking away from it locally. Giving up locally without telling the
+    -- adapter leaves the original request dangling; since func-eval-style
+    -- requests are commonly processed one at a time, that can affect
+    -- requests sent afterward, not just this one -- best-effort, fire and
+    -- forget, nothing here depends on it actually succeeding.
+    if session.capabilities and session.capabilities.supportsCancelRequest then
+      pcall(function()
+        session:request('cancel', { requestId = eval_request_seq }, function() end)
+      end)
     end
     render_tree_lines({
       ('Timed out evaluating "%s"'):format(expr),
