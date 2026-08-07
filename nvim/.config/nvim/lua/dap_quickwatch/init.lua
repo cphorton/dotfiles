@@ -187,25 +187,32 @@ end
 
 -- Methods that take a lambda but aren't implemented in dncdbg's evaluator
 -- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod/
--- EvaluateLinqSelectMethod/EvaluateLinqSelectManyMethod in
--- evalstackmachine.cpp -- only Any/All/Count/First/Where/Select/
--- SelectMany are, as of the feat/linq-selectmany-lambda branch). `Where`
--- and `Select` used to be in this list too -- `Where` had been observed
--- to hang indefinitely when evaluated through easy-dotnet's attach-mode
--- proxy, but that turned out to be an unrelated proxy bug (a slow
--- completions request blocking the whole client message pipe, fixed in
+-- EvaluateLinqSelectMethod/EvaluateLinqSelectManyMethod/
+-- EvaluateLinqOrderByMethod in evalstackmachine.cpp -- only
+-- Any/All/Count/First/Where/Select/SelectMany/OrderBy are, as of the
+-- feat/linq-orderby-lambda branch). `Where`, `Select`, and `SelectMany`
+-- used to be in this list too -- `Where` had been observed to hang
+-- indefinitely when evaluated through easy-dotnet's attach-mode proxy,
+-- but that turned out to be an unrelated proxy bug (a slow completions
+-- request blocking the whole client message pipe, fixed in
 -- easy-dotnet-server, not specific to Where) rather than anything about
--- Where itself -- all three are now confirmed working live through the
+-- Where itself -- all four are now confirmed working live through the
 -- real attach-mode flow.
 --
--- Note: projecting to or filtering an array of a non-primitive value
--- type (a struct, e.g. DateOnly) fails with a clear dncdbg-side error
--- for Where/Select/SelectMany -- a real, currently-unresolved CoreCLR-
--- level limitation (see dncdbg's git log on the feat/linq-select-lambda
--- branch), not a hang, so it's left to dncdbg's own error rather than
--- blocked here.
+-- Note: projecting to, filtering, or sorting an array of a non-primitive
+-- value type (a struct, e.g. DateOnly) fails with a clear dncdbg-side
+-- error for Where/Select/SelectMany/OrderBy -- a real, currently-
+-- unresolved CoreCLR-level limitation (see dncdbg's git log on the
+-- feat/linq-select-lambda branch), not a hang, so it's left to dncdbg's
+-- own error rather than blocked here. OrderBy has its own additional key-
+-- type limitation on top of that: the sort key itself must be a
+-- primitive, bool, char, or string -- sorting by anything else (even a
+-- perfectly ordinary class/record) also errors cleanly rather than
+-- working, since comparing two arbitrary .NET values would need calling
+-- their own CompareTo/operator< via func-eval once per comparison the
+-- sort makes, not implemented.
 local UNSUPPORTED_LAMBDA_METHODS = {
-  'OrderBy', 'OrderByDescending',
+  'OrderByDescending',
   'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
   'Aggregate', 'ForEach',
 }
@@ -294,9 +301,9 @@ function M.reevaluate()
   if unsupported then
     render_tree_lines({
       ('"%s" with a lambda isn\'t supported yet'):format(unsupported),
-      '(only Any/All/Count/First/Where/Select/SelectMany are) -- dncdbg',
-      'returns a clean error for this one, but not sent client-side to',
-      'save the round-trip.',
+      '(only Any/All/Count/First/Where/Select/SelectMany/OrderBy are) --',
+      'dncdbg returns a clean error for this one, but not sent',
+      'client-side to save the round-trip.',
     })
     return
   end

@@ -16,7 +16,7 @@ return -- lazy.nvim
                 auto_register_dap = true,
                 -- Our own build of dncdbg (github.com/cphorton/dncdbg, a netcoredbg
                 -- fork) at ~/Development/dncdbg, currently on
-                -- feat/linq-selectmany-lambda (builds on dev/combined-array-fixes,
+                -- feat/linq-orderby-lambda (builds on dev/combined-array-fixes,
                 -- which merges fix/walkmembers-array-real-members +
                 -- fix/extension-methods-array-receiver). Fixes two real netcoredbg
                 -- bugs that broke dap_quickwatch (and DAP evaluation generally) on
@@ -26,13 +26,16 @@ return -- lazy.nvim
                 -- or failing outright (unpatched dncdbg). Also adds real func-eval
                 -- support for LINQ lambda methods on arrays: Any/All/Count/First
                 -- (scalar results), Where (filters to a same-typed new array),
-                -- Select (projects to a differently-typed new array), and
-                -- SelectMany (flattens per-element sub-sequences into one new
-                -- array) -- all via ICorDebugEval2::NewParameterizedArray.
-                -- Projecting to or filtering an array of a non-primitive value
-                -- type (a struct) fails with a clear error rather than working --
-                -- a real, currently-unresolved CoreCLR-level limitation, not a
-                -- dncdbg bug (see that repo's git log). bin_path takes priority
+                -- Select (projects to a differently-typed new array), SelectMany
+                -- (flattens per-element sub-sequences into one new array), and
+                -- OrderBy (reorders by a key selector, sorted entirely in C++
+                -- after extracting each element's key) -- the first three via
+                -- ICorDebugEval2::NewParameterizedArray. Projecting to, filtering,
+                -- or sorting an array of a non-primitive value type (a struct)
+                -- fails with a clear error rather than working -- a real,
+                -- currently-unresolved CoreCLR-level limitation, not a dncdbg bug
+                -- (see that repo's git log). OrderBy also only supports a
+                -- primitive/bool/char/string sort key. bin_path takes priority
                 -- over `engine` below (which is otherwise ignored once set), per
                 -- easy-dotnet's own dotnet-client.lua initialize() call.
                 bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
