@@ -17,6 +17,7 @@
 -- default single "name: value" line.
 local ui = require('dap.ui')
 local entity = require('dap.entity')
+local signature = require('roslyn_watch_signature')
 
 local M = {}
 
@@ -230,6 +231,7 @@ local function find_unsupported_lambda_method(expr)
 end
 
 function M.close()
+  signature.hide()
   for _, win in ipairs({ state.input_win, state.tree_win }) do
     if win and vim.api.nvim_win_is_valid(win) then
       vim.api.nvim_win_close(win, true)
@@ -537,6 +539,50 @@ function M.open(prefill)
     focus_tree()
   end, { buffer = state.input_buf })
   vim.keymap.set('n', '<Tab>', focus_tree, { buffer = state.input_buf })
+
+  -- Real Roslyn signature help (parameter hints, overload cycling) --
+  -- see roslyn_watch_signature for the full rationale (blink's own
+  -- signature help is disabled project-wide and can't cycle overloads;
+  -- lsp-overloads.nvim only resolves against the *current* buffer's LSP
+  -- client, which the QuickWatch scratch buffer has none of).
+  --
+  -- Triggered on '(' and ',' (opening a call / moving to the next
+  -- argument) and dismissed on ')' (closing it) -- checked here rather
+  -- than via InsertCharPre because TextChangedI already fires after the
+  -- buffer reflects the typed character, so the popup shows the
+  -- signature reflecting what's actually on the line, not what's about
+  -- to be inserted.
+  vim.api.nvim_create_autocmd('TextChangedI', {
+    buffer = state.input_buf,
+    callback = function()
+      local win = vim.api.nvim_get_current_win()
+      local col = vim.api.nvim_win_get_cursor(win)[2]
+      local line = vim.api.nvim_get_current_line()
+      local before_cursor = line:sub(1, col)
+      local trigger_char = before_cursor:sub(-1)
+      if trigger_char == '(' or trigger_char == ',' then
+        signature.trigger()
+      elseif trigger_char == ')' then
+        signature.hide()
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd('InsertLeave', {
+    buffer = state.input_buf,
+    callback = signature.hide,
+  })
+
+  -- <C-k> confirmed unclaimed by blink.cmp (its own signature help is
+  -- disabled, see blink.lua) -- triggers a fresh signature-help lookup if
+  -- nothing is showing, or cycles to the next overload of an
+  -- already-shown one without another LSP round trip.
+  vim.keymap.set('i', '<C-k>', function()
+    if signature.is_visible() then
+      signature.cycle()
+    else
+      signature.trigger()
+    end
+  end, { buffer = state.input_buf })
 
   if prefill ~= '' then
     M.reevaluate()
