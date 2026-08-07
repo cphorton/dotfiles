@@ -202,8 +202,21 @@ function M.reevaluate()
       'The debug adapter never responded (>10s) -- some adapters hang',
       'rather than error on certain expressions (e.g. netcoredbg on',
       'direct array member/method access -- try indexing first).',
+      '',
+      'WARNING: on CoreCLR a timed-out func-eval that fails to abort',
+      'cleanly can leave the whole debug session unusable (not just this',
+      'expression) -- if stepping/continuing/breakpoints stop responding',
+      'too, restart the debug session rather than trying to work around it.',
     })
-  end, 10000)
+    -- The tree pane is easy to miss/scroll past; the same "session may be
+    -- unusable now" risk deserves a notification that doesn't depend on
+    -- the user still looking at QuickWatch when it happens.
+    vim.notify(
+      ('QuickWatch: "%s" timed out -- if the rest of the debug session ' ..
+        'stops responding too, restart it (CoreCLR func-eval timeouts can ' ..
+        'corrupt the session, not just this expression)'):format(expr),
+      vim.log.levels.WARN
+    )
 end
 
 function M.add_watch()
