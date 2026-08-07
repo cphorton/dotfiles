@@ -168,6 +168,23 @@ local function current_expr()
   return vim.trim(vim.api.nvim_buf_get_lines(state.input_buf, 0, 1, true)[1] or '')
 end
 
+local function focus_tree()
+  if state.tree_win and vim.api.nvim_win_is_valid(state.tree_win) then
+    vim.api.nvim_set_current_win(state.tree_win)
+  end
+end
+
+-- Re-enters insert mode on landing, matching M.open()'s own initial
+-- startinsert! -- the expression box exists to be typed into, so jumping
+-- back to it via <Tab> should let the user continue typing immediately
+-- rather than requiring an extra `i`.
+local function focus_input()
+  if state.input_win and vim.api.nvim_win_is_valid(state.input_win) then
+    vim.api.nvim_set_current_win(state.input_win)
+    vim.cmd('startinsert!')
+  end
+end
+
 -- Methods that take a lambda but aren't implemented in dncdbg's evaluator
 -- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod in
 -- evalstackmachine.cpp -- only Any/All/Count/First/Where are, as of the
@@ -420,7 +437,7 @@ function M.open(prefill)
     height = input_height,
     border = b,
     style = 'minimal',
-    title = ' Expression  (<CR> reevaluate, <leader>a add watch) ',
+    title = ' Expression  (<CR> reevaluate, <Tab> results, <leader>a watch, <Esc> close) ',
     title_pos = 'center',
   })
 
@@ -444,6 +461,7 @@ function M.open(prefill)
     { buffer = state.tree_buf })
   vim.keymap.set('n', 'a', function() toggle_at_cursor() end, { buffer = state.tree_buf })
   vim.keymap.set('n', 'o', function() toggle_at_cursor() end, { buffer = state.tree_buf })
+  vim.keymap.set('n', '<Tab>', focus_input, { buffer = state.tree_buf })
 
   state.tree_win = vim.api.nvim_open_win(state.tree_buf, false, {
     relative = 'editor',
@@ -453,7 +471,7 @@ function M.open(prefill)
     height = tree_height,
     border = b,
     style = 'minimal',
-    title = ' Name / Value / Type ',
+    title = ' Name / Value / Type  (<Tab> expression, <Esc>/q close) ',
     title_pos = 'center',
   })
   vim.wo[state.tree_win].wrap = false
@@ -488,6 +506,23 @@ function M.open(prefill)
     M.reevaluate()
   end, { buffer = state.input_buf })
   vim.keymap.set('n', '<CR>', M.reevaluate, { buffer = state.input_buf })
+
+  -- <Tab> switches focus to the results pane, but only when there's no
+  -- completion menu open to navigate -- blink's super-tab preset (see
+  -- blink.lua) already owns <Tab> for accept/select-next whenever the
+  -- menu is visible, and a buffer-local mapping here would otherwise
+  -- shadow that unconditionally (same class of bug <CR> hit above: don't
+  -- blindly override a key blink is already using contextually).
+  vim.keymap.set('i', '<Tab>', function()
+    local ok, blink = pcall(require, 'blink.cmp')
+    if ok and blink.is_menu_visible() then
+      blink.select_and_accept()
+      return
+    end
+    vim.cmd('stopinsert')
+    focus_tree()
+  end, { buffer = state.input_buf })
+  vim.keymap.set('n', '<Tab>', focus_tree, { buffer = state.input_buf })
 
   if prefill ~= '' then
     M.reevaluate()
