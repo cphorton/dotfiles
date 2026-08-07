@@ -77,18 +77,19 @@ local function current_expr()
 end
 
 -- Methods that take a lambda but aren't implemented in dncdbg's evaluator
--- yet (see EvaluateLinqPredicateMethod in evalstackmachine.cpp -- only
--- Any/All/Count/First are). `Where` specifically has been observed to
--- hang indefinitely when evaluated through easy-dotnet's attach-mode
--- proxy, rather than the clean, fast "not supported" error it returns
--- under direct launch mode -- root cause not fully pinned down (dncdbg
--- itself answers in ~5ms either way; something in the proxy layer
--- appears to lose the response specifically for this case). Blocking
--- these client-side means the request is never sent in the first place,
--- rather than relying on the timeout below to recover cleanly from a
--- hang that, empirically, it doesn't always.
+-- yet (see EvaluateLinqPredicateMethod/EvaluateLinqWhereMethod in
+-- evalstackmachine.cpp -- only Any/All/Count/First/Where are, as of the
+-- feat/linq-where-lambda branch). `Where` used to be in this list too --
+-- it had been observed to hang indefinitely when evaluated through
+-- easy-dotnet's attach-mode proxy even though dncdbg itself answered in
+-- ~5ms (with a "not supported" error, before it was implemented); root
+-- cause was never pinned down in the proxy layer. Now that dncdbg
+-- actually implements Where (returning a real array result, not just a
+-- fast error), the same proxy path hasn't been re-validated under
+-- attach mode specifically -- worth watching for a recurrence there even
+-- though it's no longer blocked client-side.
 local UNSUPPORTED_LAMBDA_METHODS = {
-  'Where', 'Select', 'SelectMany', 'OrderBy', 'OrderByDescending',
+  'Select', 'SelectMany', 'OrderBy', 'OrderByDescending',
   'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
   'Aggregate', 'ForEach',
 }

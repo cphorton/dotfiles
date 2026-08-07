@@ -7,10 +7,11 @@
 --
 -- Points debugger_path at our own build of dncdbg (github.com/cphorton/dncdbg,
 -- a netcoredbg fork) at ~/Development/dncdbg, currently on
--- dev/combined-array-fixes -- fixes two real netcoredbg bugs that broke
--- dap_quickwatch on array-typed expressions: `array.Length`/`array.Rank`
--- never resolving, and any method call on an array (including every LINQ
--- method) hanging/failing outright. See that repo's git log for details.
+-- feat/linq-where-lambda -- fixes two real netcoredbg bugs that broke
+-- dap_quickwatch on array-typed expressions (`array.Length`/`array.Rank`
+-- never resolving, any method call on an array hanging/failing outright),
+-- plus adds real func-eval support for LINQ lambda methods on arrays
+-- (Any/All/Count/First/Where). See that repo's git log for details.
 --
 -- NOTE: dotnet-debug.nvim's setup() calls dapui.setup() with its own layout,
 -- which can clobber the dapui.setup() in dap.lua depending on plugin load
