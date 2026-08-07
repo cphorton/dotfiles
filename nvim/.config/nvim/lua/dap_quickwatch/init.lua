@@ -25,12 +25,84 @@ local COL_NAME, COL_VALUE = 32, 44
 ---@type table
 local state = {}
 
+-- Icon glyphs/highlights use vim.fn.strdisplaywidth (not #s / byte length)
+-- for width measurement and truncation, since both the disclosure
+-- triangles and type icons below are multi-byte UTF-8 -- byte length
+-- overcounts their actual terminal column width and would throw off the
+-- fixed-width column alignment pad() exists to guarantee. Truncation
+-- walks character-by-character (vim.fn.strcharpart) rather than byte
+-- slicing so it can't cut a multi-byte glyph in half.
 local function pad(s, width)
   s = tostring(s or ''):gsub('\n', ' ')
-  if #s > width - 1 then
-    return s:sub(1, width - 2) .. '…'
+  local dispw = vim.fn.strdisplaywidth(s)
+  if dispw > width - 1 then
+    local truncated = s
+    while vim.fn.strdisplaywidth(truncated) > width - 2 do
+      truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 1)
+    end
+    return truncated .. '…'
   end
-  return s .. string.rep(' ', width - #s)
+  return s .. string.rep(' ', width - dispw)
+end
+
+local ICON_EXPANDED, ICON_COLLAPSED, ICON_LEAF = '▾', '▸', ' '
+
+-- Same glyphs and BlinkCmpKind* highlight groups blink.cmp's own default
+-- kind_icons use (lua/blink/cmp/config/appearance.lua) -- reused here
+-- rather than picking new ones so the tree matches the icons already
+-- shown in this same box's own completion popup. DAP variable/evaluate
+-- responses don't carry real completion-item-kind metadata the way an
+-- LSP does (there's no method/field/property distinction -- QuickWatch's
+-- tree only ever shows values, never method signatures), so this is a
+-- coarse classification from what IS available (has_children, CLR type
+-- name), not a full kind mapping.
+local TYPE_ICON_CLASS = { glyph = '󱡠', hl = 'BlinkCmpKindClass' } -- expandable: array/class/struct/record
+local TYPE_ICON_VALUE = { glyph = '󰦨', hl = 'BlinkCmpKindValue' } -- numeric/bool leaf
+local TYPE_ICON_TEXT  = { glyph = '󰉿', hl = 'BlinkCmpKindText' }  -- string/char leaf
+local TYPE_ICON_FIELD = { glyph = '󰜢', hl = 'BlinkCmpKindField' } -- anything else leaf
+
+local NUMERIC_BOOL_TYPES = {
+  int = true, long = true, short = true, sbyte = true,
+  uint = true, ulong = true, ushort = true, byte = true,
+  float = true, double = true, decimal = true, bool = true, boolean = true,
+}
+
+local function type_icon(var, has_children)
+  if has_children then
+    return TYPE_ICON_CLASS
+  end
+  local t = var.type and var.type:lower() or ''
+  if NUMERIC_BOOL_TYPES[t] then
+    return TYPE_ICON_VALUE
+  end
+  if t == 'string' or t == 'char' then
+    return TYPE_ICON_TEXT
+  end
+  return TYPE_ICON_FIELD
+end
+
+-- `evaluateName` (a full expression path, e.g. "forecast[0].TemperatureC")
+-- is present on every child dap.Variable dncdbg returns and is stable
+-- across reevaluate() calls of the same expression text, unlike `.name`
+-- alone (which collides across siblings at different depths, e.g. two
+-- unrelated "[0]" rows). Root responses have neither -- there's only ever
+-- one root visible at a time, so a constant key is fine.
+local function node_key(var)
+  return var.evaluateName or var.name or '__root__'
+end
+
+-- dap.ui's own with_indent (dap/ui.lua) is a local, not exported --
+-- reimplemented here so toggle_at_cursor below can re-render a single
+-- already-indented row through the same render_row function dap.ui
+-- itself uses for that row, without needing dap.ui's internals.
+local function with_indent(indent, fn)
+  return function(...)
+    local text, hl_groups = fn(...)
+    return string.rep(' ', indent) .. text, vim.tbl_map(function(hl)
+      local end_col = hl[3] == -1 and -1 or hl[3] + indent
+      return { hl[1], hl[2] + indent, end_col }
+    end, hl_groups or {})
+  end
 end
 
 -- Used as both render_parent and render_child on a copy of
@@ -44,13 +116,33 @@ end
 -- built for. Deeply nested rows will drift out of column alignment as
 -- indentation eats into the Name column -- acceptable for the common
 -- 1-2 level nesting case this is meant for.
+--
+-- The disclosure triangle reflects dap_quickwatch's own state.expanded
+-- tracking (see toggle_at_cursor), not dap.ui's internal expand state --
+-- that's private to dap.ui's tree object and dap.ui never re-renders a
+-- row's own line on expand/collapse (only the child lines below it
+-- change), so there'd be nothing to read it from even if it were public.
 local function render_row(var)
+  local has_children = entity.variable.has_children(var)
+  local key = node_key(var)
+  local disclosure = has_children
+      and (state.expanded and state.expanded[key] and ICON_EXPANDED or ICON_COLLAPSED)
+      or ICON_LEAF
+  local icon = type_icon(var, has_children)
+
   local name = var.name or '(root)'
   local value = var.value or var.result or ''
   local typ = var.type or ''
-  local text = pad(name, COL_NAME) .. pad(value, COL_VALUE) .. typ
+
+  local name_field = disclosure .. ' ' .. icon.glyph .. ' ' .. name
+  local text = pad(name_field, COL_NAME) .. pad(value, COL_VALUE) .. typ
+
+  local icon_start = #disclosure + 1
+  local name_start = icon_start + #icon.glyph + 1
+
   return text, {
-    { 'Identifier', 0, #name },
+    { icon.hl,      icon_start, icon_start + #icon.glyph },
+    { 'Identifier', name_start, name_start + #name },
     { 'Type',       COL_NAME + COL_VALUE, -1 },
   }
 end
@@ -122,6 +214,52 @@ local function render_tree_lines(lines)
   state.layer.render(lines, tostring, nil, 2, -1)
 end
 
+-- Wraps dap.ui.trigger_actions() to keep render_row's disclosure triangle
+-- in sync. Doesn't try to predict whether the action that ran was
+-- actually "expand"/"collapse" (dap.entity.variable.tree_spec's
+-- compute_actions can offer others -- copy expression, add to watches,
+-- set value -- and QuickWatch inherits all of them unmodified); instead
+-- it observes the ground truth after the action runs, by checking
+-- whether the line below the toggled row now has a deeper indent than
+-- before. That's robust regardless of which action actually fired: a
+-- non-expand action leaves the surrounding indentation exactly as it
+-- was, so it's a no-op for expand tracking either way.
+--
+-- Then re-renders just that one row's own line (dap.ui's expand/collapse
+-- only ever inserts/removes the *children* lines below it, never
+-- re-renders the toggled row itself) so the flipped icon is visible
+-- immediately rather than only after the next reevaluate().
+local function toggle_at_cursor(opts)
+  local win = vim.api.nvim_get_current_win()
+  local lnum, col = unpack(vim.api.nvim_win_get_cursor(win))
+  lnum = lnum - 1
+  local info = state.layer and state.layer.get(lnum, 0, col)
+  local item = info and info.item
+
+  if not item or not entity.variable.has_children(item) then
+    ui.trigger_actions(opts)
+    return
+  end
+
+  ui.trigger_actions(opts)
+
+  local buf = state.tree_buf
+  if not (buf and vim.api.nvim_buf_is_valid(buf)) then
+    return
+  end
+  local this_line = vim.api.nvim_buf_get_lines(buf, lnum, lnum + 1, false)[1] or ''
+  local next_line = vim.api.nvim_buf_get_lines(buf, lnum + 1, lnum + 2, false)[1] or ''
+  local this_indent = #(this_line:match('^%s*'))
+  local next_indent = #(next_line:match('^%s*'))
+  local now_expanded = next_indent > this_indent
+
+  state.expanded[node_key(item)] = now_expanded or nil
+
+  local indent = (info.context and info.context.indent) or 0
+  local render = indent > 0 and with_indent(indent, render_row) or render_row
+  state.layer.render({ item }, render, info.context, lnum, lnum + 1)
+end
+
 function M.reevaluate()
   local expr = current_expr()
   if not expr or expr == '' then
@@ -171,6 +309,12 @@ function M.reevaluate()
       if not (state.tree_buf and vim.api.nvim_buf_is_valid(state.tree_buf)) then
         return
       end
+      -- dap.ui's tree.render() always force-expands the root on every
+      -- call regardless of any prior collapse (see dap/ui.lua's own
+      -- render()) -- mirror that here so render_row's disclosure
+      -- triangle for the root matches what's actually about to be shown,
+      -- rather than staying "▸" from a collapse earlier in this session.
+      state.expanded[node_key(resp)] = true
       state.tree.render(state.layer, resp, nil, 2, -1)
     end)
   end)
@@ -239,6 +383,7 @@ function M.open(prefill)
   end
 
   prefill = prefill or ''
+  state.expanded = {}
   local total_width = math.floor(vim.o.columns * 0.6)
   local input_height = 1
   local tree_height = math.floor(vim.o.lines * 0.5)
@@ -293,12 +438,12 @@ function M.open(prefill)
     { header, string.rep('─', math.max(total_width - 2, 1)) })
   vim.bo[state.tree_buf].modifiable = false
 
-  vim.api.nvim_buf_set_keymap(state.tree_buf, 'n', '<CR>',
-    "<Cmd>lua require('dap.ui').trigger_actions({ mode = 'first' })<CR>", {})
-  vim.api.nvim_buf_set_keymap(state.tree_buf, 'n', 'a',
-    "<Cmd>lua require('dap.ui').trigger_actions()<CR>", {})
-  vim.api.nvim_buf_set_keymap(state.tree_buf, 'n', 'o',
-    "<Cmd>lua require('dap.ui').trigger_actions()<CR>", {})
+  -- Routed through toggle_at_cursor (not straight to dap.ui.trigger_actions)
+  -- so the disclosure triangle stays in sync -- see its comment above.
+  vim.keymap.set('n', '<CR>', function() toggle_at_cursor({ mode = 'first' }) end,
+    { buffer = state.tree_buf })
+  vim.keymap.set('n', 'a', function() toggle_at_cursor() end, { buffer = state.tree_buf })
+  vim.keymap.set('n', 'o', function() toggle_at_cursor() end, { buffer = state.tree_buf })
 
   state.tree_win = vim.api.nvim_open_win(state.tree_buf, false, {
     relative = 'editor',
