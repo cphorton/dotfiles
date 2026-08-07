@@ -218,6 +218,7 @@ function M.reevaluate()
         'corrupt the session, not just this expression)'):format(expr),
       vim.log.levels.WARN
     )
+  end, 10000)
 end
 
 function M.add_watch()
