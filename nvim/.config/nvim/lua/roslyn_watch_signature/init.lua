@@ -22,6 +22,8 @@
 
 local M = {}
 
+local sig_help_ns = vim.api.nvim_create_namespace('roslyn_watch_signature')
+
 ---@type table
 local state = {} -- { win, buf, signature_help, active_index }
 local generation = 0
@@ -60,27 +62,48 @@ local function render(signature_help, active_index)
   render_help.activeSignature = active_index
 
   -- ft passed as nil (not 'cs'): with a real filetype, this wraps the
-  -- signature label in a ```cs fenced code block, which is meant to be
-  -- stripped back out and replaced with proper :syntax-region highlighting
-  -- by vim.lsp.util.open_floating_preview's own do_stylize path (only
-  -- active when vim.g.syntax_on is set) -- since this hand-rolled popup
-  -- (see below for why) doesn't replicate that private, non-exported
-  -- stylize_markdown logic, requesting the fence wrap here would just
-  -- leave the literal ```/``` delimiter lines visible as text. Passing
-  -- nil sidesteps the whole problem: the label renders as plain text,
-  -- with the active-parameter highlight still applied separately below.
+  -- signature label in a ```cs fenced code block, meant to be stripped
+  -- back out and replaced with proper :syntax-region highlighting by
+  -- vim.lsp.util.open_floating_preview's own private do_stylize path,
+  -- which this hand-rolled popup (see below for why) doesn't replicate.
   local lines, hl_range = vim.lsp.util.convert_signature_help_to_markdown_lines(render_help, nil, { '(', ',' })
   if not lines or #lines == 0 then
     M.hide()
     return
   end
 
-  -- Same reasoning for the documentation separator: convert_*_to_markdown_lines
-  -- emits a literal '---' line between the signature and its doc text,
-  -- normally expanded into a proper horizontal rule by that same private
-  -- stylize_markdown step. Collect the indices now (left as '---' -- short
-  -- enough not to skew the width calc below) and replace with a sized rule
-  -- once the popup's width is known.
+  -- Not just the label's own (now-skipped) fence wrap: Roslyn's own
+  -- signature/parameter documentation comes back as an LSP MarkedString
+  -- with an empty `language` field, and convert_input_to_markdown_lines
+  -- (called internally above) unconditionally wraps *any* MarkedString in
+  -- a ```<language> fence -- with language == '', that's a bare ``` on
+  -- its own line. Same underlying issue as the label wrap (nothing here
+  -- replicates stylize_markdown's fence-stripping), same fix: drop every
+  -- fence delimiter line rather than trying to distinguish its source.
+  -- '---' separators are handled the same way stylize_markdown does:
+  -- replaced with a sized rule once the popup's width is known below.
+  -- row_map lets the highlight-range remap below survive lines actually
+  -- being removed (not just replaced), in case a fence ever precedes the
+  -- signature line itself.
+  local stripped, row_map = {}, {}
+  for i, l in ipairs(lines) do
+    if l:match('^```') then
+      row_map[i - 1] = nil
+    else
+      row_map[i - 1] = #stripped
+      stripped[#stripped + 1] = l
+    end
+  end
+  lines = stripped
+  if hl_range then
+    local new_start, new_end = row_map[hl_range[1]], row_map[hl_range[3]]
+    if new_start and new_end then
+      hl_range[1], hl_range[3] = new_start, new_end
+    else
+      hl_range = nil -- highlighted row was itself a stripped fence line
+    end
+  end
+
   local separator_lines = {}
   for i, l in ipairs(lines) do
     if l:match('^%-%-%-+$') then
@@ -152,7 +175,19 @@ local function render(signature_help, active_index)
   pcall(vim.treesitter.start, buf, 'markdown')
 
   if hl_range then
-    vim.api.nvim_buf_add_highlight(buf, -1, 'LspSignatureActiveParameter', hl_range[1], hl_range[2], hl_range[4])
+    -- Matches vim.lsp.handlers' own real signature-help handler exactly
+    -- (vim/lsp/handlers.lua), which applies hl_range via vim.hl.range,
+    -- not nvim_buf_add_highlight -- confirmed the two are equivalent for
+    -- this single-line case, so this doesn't change what's highlighted,
+    -- just matches upstream's own usage. Note hl_range's column, as
+    -- returned by vim.lsp.util's own get_pos_from_offset, lands one
+    -- character later than a naive read of the label text would suggest
+    -- (e.g. highlights "unc<T, bool> predicate)" rather than "Func<T,
+    -- bool> predicate" for a parameter starting right after '(') --
+    -- confirmed this is inherent upstream behavior, not something
+    -- introduced here, so not worth chasing further for a cosmetic,
+    -- easy-to-miss one-character highlight shift.
+    vim.hl.range(buf, sig_help_ns, 'LspSignatureActiveParameter', { hl_range[1], hl_range[2] }, { hl_range[3], hl_range[4] })
   end
   state = { win = win, buf = buf, signature_help = signature_help, active_index = active_index }
 end
