@@ -59,10 +59,33 @@ local function render(signature_help, active_index)
   local render_help = vim.deepcopy(signature_help)
   render_help.activeSignature = active_index
 
-  local lines, hl_range = vim.lsp.util.convert_signature_help_to_markdown_lines(render_help, 'cs', { '(', ',' })
+  -- ft passed as nil (not 'cs'): with a real filetype, this wraps the
+  -- signature label in a ```cs fenced code block, which is meant to be
+  -- stripped back out and replaced with proper :syntax-region highlighting
+  -- by vim.lsp.util.open_floating_preview's own do_stylize path (only
+  -- active when vim.g.syntax_on is set) -- since this hand-rolled popup
+  -- (see below for why) doesn't replicate that private, non-exported
+  -- stylize_markdown logic, requesting the fence wrap here would just
+  -- leave the literal ```/``` delimiter lines visible as text. Passing
+  -- nil sidesteps the whole problem: the label renders as plain text,
+  -- with the active-parameter highlight still applied separately below.
+  local lines, hl_range = vim.lsp.util.convert_signature_help_to_markdown_lines(render_help, nil, { '(', ',' })
   if not lines or #lines == 0 then
     M.hide()
     return
+  end
+
+  -- Same reasoning for the documentation separator: convert_*_to_markdown_lines
+  -- emits a literal '---' line between the signature and its doc text,
+  -- normally expanded into a proper horizontal rule by that same private
+  -- stylize_markdown step. Collect the indices now (left as '---' -- short
+  -- enough not to skew the width calc below) and replace with a sized rule
+  -- once the popup's width is known.
+  local separator_lines = {}
+  for i, l in ipairs(lines) do
+    if l:match('^%-%-%-+$') then
+      separator_lines[#separator_lines + 1] = i
+    end
   end
 
   local count = #signature_help.signatures
@@ -96,6 +119,10 @@ local function render(signature_help, active_index)
   width = math.min(width, math.max(vim.o.columns - 4, 20))
   local height = math.min(#lines, 15)
 
+  for _, i in ipairs(separator_lines) do
+    lines[i] = string.rep('─', width)
+  end
+
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].bufhidden = 'wipe'
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
@@ -116,6 +143,12 @@ local function render(signature_help, active_index)
   })
   vim.wo[win].wrap = true
   vim.wo[win].linebreak = true
+  -- The signature line itself is plain text now (no fence, see above), but
+  -- a method's XML-doc summary/param text can still carry inline markdown
+  -- (`` `code` ``, **bold**) via convert_input_to_markdown_lines -- conceal
+  -- + treesitter renders that properly instead of showing the raw markers.
+  vim.wo[win].conceallevel = 2
+  vim.wo[win].concealcursor = ''
   pcall(vim.treesitter.start, buf, 'markdown')
 
   if hl_range then
