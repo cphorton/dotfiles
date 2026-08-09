@@ -33,38 +33,58 @@ local FALLBACK_COL_TYPE = 40
 local MIN_COL_TYPE = 8
 
 -- dap.ui's own renderer (dap/ui.lua's Layer.render) only ever calls
--- render_fn(item) -- no context, no indent -- so render_row has no way
--- to know how deeply nested the row it's rendering actually is; indent
--- is prepended entirely *after* render_row returns, by dap.ui's own
--- with_indent wrapper (+2 cells per nesting level). Confirmed live: a
--- long CLR type name on a row 3 levels deep (forecast[0].
--- EqualityContract.Assembly) still ran past the window edge with no
--- ellipsis even after col_type_width() below started accounting for the
--- window's own total width, because that calculation had no way to
--- subtract the indent that would still get added on top of it.
--- INDENT_MARGIN reserves room for up to ~12 levels of nesting (reflection
--- metadata trees -- Assembly -> DeclaringType -> BaseType -> ... -- can
--- go deep if a user keeps drilling in), traded off against a narrower
--- Type column at shallow depth. Deriving the *exact* indent instead
--- (e.g. via each var's dap.ui-internal `.__parent` chain) was considered
--- and rejected: that field is only ever set on children that themselves
--- have children (dap.ui's own expand-state bookkeeping, not meant for
--- this), so it wouldn't even be available on every row -- a fixed
--- generous margin is simpler and robust to dap.ui's internals changing.
-local INDENT_MARGIN = 24
+-- render_fn(item) -- no context, no indent -- so render_row can't be
+-- TOLD how deeply nested the row it's rendering is; indent is prepended
+-- entirely *after* render_row returns, by dap.ui's own with_indent
+-- wrapper (+2 cells per nesting level). A first attempt used one fixed
+-- margin (24 cells) subtracted from every row's cap regardless of actual
+-- depth -- that avoided hard-clipping, but blanket-truncated *every*
+-- row's type, including the root row (indent=0, no margin needed at
+-- all), confirmed live by inspecting the actual rendered buffer over
+-- nvim's own RPC (`nvim --server <addr> --remote-expr`) on the running
+-- session -- every row *did* get a graceful '…' with that fix, just a
+-- needlessly aggressive one for shallow rows.
+--
+-- dap.ui does track each row's ancestry, just not for this purpose: in
+-- expand() (dap/ui.lua), any child that itself has_children gets
+-- `child.__parent = {key=<parent key>, __parent=<parent's own __parent>}`
+-- -- a linked list back to the root, built specifically for dap.ui's own
+-- expand-state lookups (is_expanded/set_expanded). Walking it gives the
+-- exact hop count to the root, and each hop is exactly one +2 indent
+-- level (verified by tracing expand()'s indent arithmetic by hand and
+-- confirming against the live 3-levels-deep case). Only set on
+-- expandable (has_children) rows, so it's nil for leaves regardless of
+-- their real depth -- but leaf types are always short CLR primitives
+-- (int, bool, string...), so a small flat floor for that case is safe.
+local LEAF_INDENT_MARGIN = 6
+
+local function estimate_indent(var)
+  local hops = 0
+  local p = var.__parent
+  while p do
+    hops = hops + 1
+    p = p.__parent
+  end
+  if hops == 0 then
+    return LEAF_INDENT_MARGIN
+  end
+  return hops * 2
+end
 
 -- Type is the last column, so nothing to its right needs it padded out to
 -- a fixed width -- but it does need a *cap*, sized to whatever room is
--- actually left in the tree window (state.tree_width, set in M.open()),
--- so a long CLR type name (e.g. System.Reflection.RuntimeAssembly) gets
--- a graceful '…' instead of running past the window edge and getting
--- hard-clipped mid-word with no ellipsis at all (wrap=false in the tree
--- window, so anything past the edge just silently disappears).
-local function col_type_width()
+-- actually left in the tree window (state.tree_width, set in M.open())
+-- minus this row's own actual indent, so a long CLR type name (e.g.
+-- System.Reflection.RuntimeAssembly) gets a graceful '…' instead of
+-- running past the window edge and getting hard-clipped mid-word with no
+-- ellipsis at all (wrap=false in the tree window, so anything past the
+-- edge just silently disappears) -- without needlessly truncating
+-- shallow rows that never needed the room reserved for deep ones.
+local function col_type_width(var)
   if not state.tree_width then
     return FALLBACK_COL_TYPE
   end
-  return math.max(state.tree_width - COL_NAME - COL_VALUE - INDENT_MARGIN, MIN_COL_TYPE)
+  return math.max(state.tree_width - COL_NAME - COL_VALUE - estimate_indent(var), MIN_COL_TYPE)
 end
 
 -- Icon glyphs/highlights use vim.fn.strdisplaywidth (not #s / byte length)
@@ -194,7 +214,7 @@ local function render_row(var)
   -- name can't run past the tree window's edge and get hard-clipped
   -- mid-word (e.g. "System.Reflection.RuntimeAssembly" cut to
   -- "System.Reflection.RuntimeAssembl" with no ellipsis at all).
-  local typ = truncate(var.type or '', col_type_width())
+  local typ = truncate(var.type or '', col_type_width(var))
 
   local name_field = disclosure .. ' ' .. icon.glyph .. ' ' .. name
   local name_padded = pad(name_field, COL_NAME)
