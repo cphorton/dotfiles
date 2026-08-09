@@ -332,7 +332,7 @@ end
 -- sort makes, not implemented.
 local UNSUPPORTED_LAMBDA_METHODS = {
   'OrderByDescending',
-  'ThenBy', 'ThenByDescending', 'GroupBy', 'TakeWhile', 'SkipWhile',
+  'ThenBy', 'ThenByDescending', 'TakeWhile', 'SkipWhile',
   'Aggregate', 'ForEach',
 }
 
