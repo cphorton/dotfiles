@@ -145,7 +145,9 @@ local function render_row(var)
   local typ = var.type or ''
 
   local name_field = disclosure .. ' ' .. icon.glyph .. ' ' .. name
-  local text = pad(name_field, COL_NAME) .. pad(value, COL_VALUE) .. typ
+  local name_padded = pad(name_field, COL_NAME)
+  local value_padded = pad(value, COL_VALUE)
+  local text = name_padded .. value_padded .. typ
 
   local icon_start = #disclosure + 1
   local name_start = icon_start + #icon.glyph + 1
@@ -153,7 +155,19 @@ local function render_row(var)
   return text, {
     { icon.hl,      icon_start, icon_start + #icon.glyph },
     { 'Identifier', name_start, name_start + #name },
-    { 'Type',       COL_NAME + COL_VALUE, -1 },
+    -- #name_padded + #value_padded (actual BYTE length), not
+    -- COL_NAME + COL_VALUE (display-cell width) -- pad() guarantees the
+    -- latter as *display width*, but every row's disclosure triangle and
+    -- kind icon are multi-byte nerd-font glyphs (4 bytes each, 1-2
+    -- display cells), so byte length runs ahead of display width by a
+    -- few bytes on every single row. Using the display-width constant
+    -- here landed this highlight a few bytes too early -- confirmed via
+    -- a direct extmark test (off by exactly the icon glyphs' byte
+    -- overhead) -- coloring the tail of the Value column's own text/
+    -- padding as if it were Type text. Most visible on truncated/near-
+    -- full values, which is why it read as "the ellipsis has no gap
+    -- before it" even after pad() itself was already correct.
+    { 'Type',       #name_padded + #value_padded, -1 },
   }
 end
 
