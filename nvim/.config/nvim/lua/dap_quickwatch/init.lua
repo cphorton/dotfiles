@@ -32,6 +32,27 @@ local state = {}
 local FALLBACK_COL_TYPE = 40
 local MIN_COL_TYPE = 8
 
+-- dap.ui's own renderer (dap/ui.lua's Layer.render) only ever calls
+-- render_fn(item) -- no context, no indent -- so render_row has no way
+-- to know how deeply nested the row it's rendering actually is; indent
+-- is prepended entirely *after* render_row returns, by dap.ui's own
+-- with_indent wrapper (+2 cells per nesting level). Confirmed live: a
+-- long CLR type name on a row 3 levels deep (forecast[0].
+-- EqualityContract.Assembly) still ran past the window edge with no
+-- ellipsis even after col_type_width() below started accounting for the
+-- window's own total width, because that calculation had no way to
+-- subtract the indent that would still get added on top of it.
+-- INDENT_MARGIN reserves room for up to ~12 levels of nesting (reflection
+-- metadata trees -- Assembly -> DeclaringType -> BaseType -> ... -- can
+-- go deep if a user keeps drilling in), traded off against a narrower
+-- Type column at shallow depth. Deriving the *exact* indent instead
+-- (e.g. via each var's dap.ui-internal `.__parent` chain) was considered
+-- and rejected: that field is only ever set on children that themselves
+-- have children (dap.ui's own expand-state bookkeeping, not meant for
+-- this), so it wouldn't even be available on every row -- a fixed
+-- generous margin is simpler and robust to dap.ui's internals changing.
+local INDENT_MARGIN = 24
+
 -- Type is the last column, so nothing to its right needs it padded out to
 -- a fixed width -- but it does need a *cap*, sized to whatever room is
 -- actually left in the tree window (state.tree_width, set in M.open()),
@@ -43,7 +64,7 @@ local function col_type_width()
   if not state.tree_width then
     return FALLBACK_COL_TYPE
   end
-  return math.max(state.tree_width - COL_NAME - COL_VALUE, MIN_COL_TYPE)
+  return math.max(state.tree_width - COL_NAME - COL_VALUE - INDENT_MARGIN, MIN_COL_TYPE)
 end
 
 -- Icon glyphs/highlights use vim.fn.strdisplaywidth (not #s / byte length)
