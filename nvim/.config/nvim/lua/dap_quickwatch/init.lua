@@ -235,10 +235,21 @@ local function render_row(var)
 
   local icon_start = #disclosure + 1
   local name_start = icon_start + #icon.glyph + 1
+  -- name_start + #name assumes the *full* name is present in name_padded,
+  -- but pad() truncates name_field (disclosure+icon+name) when it doesn't
+  -- fit COL_NAME -- when that happens, the actual name text in the output
+  -- ends earlier than name_start + #name, at #name_padded (everything
+  -- after that is pad()'s own trailing spaces, not part of the name at
+  -- all). Without this min(), the 'Identifier' highlight kept using the
+  -- untruncated end offset and overran into the Value column's own text
+  -- -- confirmed live: a truncated name's row showed its Value ("false")
+  -- colored the same purple as the name, while the untruncated sibling
+  -- row correctly showed it in the default color.
+  local name_end = math.min(name_start + #name, #name_padded)
 
   return text, {
     { icon.hl,      icon_start, icon_start + #icon.glyph },
-    { 'Identifier', name_start, name_start + #name },
+    { 'Identifier', name_start, name_end },
     -- #name_padded + #value_padded (actual BYTE length), not
     -- COL_NAME + COL_VALUE (display-cell width) -- pad() guarantees the
     -- latter as *display width*, but every row's disclosure triangle and
