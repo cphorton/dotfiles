@@ -26,6 +26,26 @@ local COL_NAME, COL_VALUE = 32, 44
 ---@type table
 local state = {}
 
+-- Fallback cap for the Type column when state.tree_width isn't available
+-- (shouldn't happen in real usage -- M.open() always sets it -- just a
+-- safety net).
+local FALLBACK_COL_TYPE = 40
+local MIN_COL_TYPE = 8
+
+-- Type is the last column, so nothing to its right needs it padded out to
+-- a fixed width -- but it does need a *cap*, sized to whatever room is
+-- actually left in the tree window (state.tree_width, set in M.open()),
+-- so a long CLR type name (e.g. System.Reflection.RuntimeAssembly) gets
+-- a graceful '…' instead of running past the window edge and getting
+-- hard-clipped mid-word with no ellipsis at all (wrap=false in the tree
+-- window, so anything past the edge just silently disappears).
+local function col_type_width()
+  if not state.tree_width then
+    return FALLBACK_COL_TYPE
+  end
+  return math.max(state.tree_width - COL_NAME - COL_VALUE, MIN_COL_TYPE)
+end
+
 -- Icon glyphs/highlights use vim.fn.strdisplaywidth (not #s / byte length)
 -- for width measurement and truncation, since both the disclosure
 -- triangles and type icons below are multi-byte UTF-8 -- byte length
@@ -40,19 +60,25 @@ local state = {}
 -- looked like it ran straight into the Type column with 1 space).
 local GAP = 2
 
-local function pad(s, width)
+-- Truncates to at most max_width display cells, appending '…' if it had
+-- to cut anything. Used directly for the Type column (last column,
+-- nothing after it to pad out to), and by pad() below (Name/Value
+-- columns, which additionally get padded to a fixed width).
+local function truncate(s, max_width)
   s = tostring(s or ''):gsub('\n', ' ')
-  local content_width = width - GAP
-  local dispw = vim.fn.strdisplaywidth(s)
-  if dispw > content_width then
-    local truncated = s
-    while vim.fn.strdisplaywidth(truncated) > content_width - 1 do
-      truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 1)
-    end
-    s = truncated .. '…'
-    dispw = vim.fn.strdisplaywidth(s)
+  if vim.fn.strdisplaywidth(s) <= max_width then
+    return s
   end
-  return s .. string.rep(' ', width - dispw)
+  local truncated = s
+  while vim.fn.strdisplaywidth(truncated) > max_width - 1 do
+    truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 1)
+  end
+  return truncated .. '…'
+end
+
+local function pad(s, width)
+  local truncated = truncate(s, width - GAP)
+  return truncated .. string.rep(' ', width - vim.fn.strdisplaywidth(truncated))
 end
 
 local ICON_EXPANDED, ICON_COLLAPSED, ICON_LEAF = '▾', '▸', ' '
@@ -142,7 +168,12 @@ local function render_row(var)
 
   local name = var.name or '(root)'
   local value = var.value or var.result or ''
-  local typ = var.type or ''
+  -- truncate(), not pad(): Type is the last column, nothing to its right
+  -- needs it padded to a fixed width -- only capped so a long CLR type
+  -- name can't run past the tree window's edge and get hard-clipped
+  -- mid-word (e.g. "System.Reflection.RuntimeAssembly" cut to
+  -- "System.Reflection.RuntimeAssembl" with no ellipsis at all).
+  local typ = truncate(var.type or '', col_type_width())
 
   local name_field = disclosure .. ' ' .. icon.glyph .. ' ' .. name
   local name_padded = pad(name_field, COL_NAME)
@@ -441,6 +472,13 @@ function M.open(prefill)
   prefill = prefill or ''
   state.expanded = {}
   local total_width = math.floor(vim.o.columns * 0.6)
+  -- Read by render_row to cap the Type column to whatever room is
+  -- actually left in the tree window, rather than a fixed guess -- the
+  -- window's own width varies with vim.o.columns (see total_width
+  -- above), so a fixed cap could still get hard window-clipped (no
+  -- ellipsis at all, since wrap=false) on a narrower terminal, or waste
+  -- space on a wider one.
+  state.tree_width = total_width
   local input_height = 1
   local tree_height = math.floor(vim.o.lines * 0.5)
   local b = border()
