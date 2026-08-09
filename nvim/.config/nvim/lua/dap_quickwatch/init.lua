@@ -80,11 +80,23 @@ end
 -- ellipsis at all (wrap=false in the tree window, so anything past the
 -- edge just silently disappears) -- without needlessly truncating
 -- shallow rows that never needed the room reserved for deep ones.
+--
+-- RIGHT_EDGE_MARGIN reserves a couple of blank cells so a truncated
+-- type's own '…' doesn't land flush against the tree window's right
+-- border with zero breathing room -- confirmed live via a zoomed-in
+-- screenshot crop: the ellipsis WAS correctly present (truncation itself
+-- was never broken by this point), it was just touching the border,
+-- which read as "still not right" the same way the earlier Value/Type
+-- gap issue did. Name/Value never hit this because GAP already reserves
+-- room before the *next column*; Type is the last column, so nothing
+-- was reserving room before the *window edge*.
+local RIGHT_EDGE_MARGIN = 2
+
 local function col_type_width(var)
   if not state.tree_width then
     return FALLBACK_COL_TYPE
   end
-  return math.max(state.tree_width - COL_NAME - COL_VALUE - estimate_indent(var), MIN_COL_TYPE)
+  return math.max(state.tree_width - COL_NAME - COL_VALUE - estimate_indent(var) - RIGHT_EDGE_MARGIN, MIN_COL_TYPE)
 end
 
 -- Icon glyphs/highlights use vim.fn.strdisplaywidth (not #s / byte length)
