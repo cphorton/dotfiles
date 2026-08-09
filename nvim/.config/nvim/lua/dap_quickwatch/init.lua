@@ -33,20 +33,24 @@ local state = {}
 -- fixed-width column alignment pad() exists to guarantee. Truncation
 -- walks character-by-character (vim.fn.strcharpart) rather than byte
 -- slicing so it can't cut a multi-byte glyph in half.
+-- GAP is the minimum blank cells always left between this column and the
+-- next, even when the value is truncated with '…' -- a single trailing
+-- space read as no gap at all once the ellipsis glyph's own visual
+-- weight is factored in (reported live: a truncated AssemblyQualifiedName
+-- looked like it ran straight into the Type column with 1 space).
+local GAP = 2
+
 local function pad(s, width)
   s = tostring(s or ''):gsub('\n', ' ')
+  local content_width = width - GAP
   local dispw = vim.fn.strdisplaywidth(s)
-  if dispw > width - 1 then
+  if dispw > content_width then
     local truncated = s
-    while vim.fn.strdisplaywidth(truncated) > width - 2 do
+    while vim.fn.strdisplaywidth(truncated) > content_width - 1 do
       truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 1)
     end
-    -- truncated..'…' is only width-1 wide -- pad it back out to the full
-    -- width like the untruncated branch below does, otherwise the next
-    -- column's text starts one cell early and runs straight into the
-    -- ellipsis with no gap between them.
-    local result = truncated .. '…'
-    return result .. string.rep(' ', width - vim.fn.strdisplaywidth(result))
+    s = truncated .. '…'
+    dispw = vim.fn.strdisplaywidth(s)
   end
   return s .. string.rep(' ', width - dispw)
 end
