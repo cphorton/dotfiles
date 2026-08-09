@@ -41,7 +41,12 @@ local function pad(s, width)
     while vim.fn.strdisplaywidth(truncated) > width - 2 do
       truncated = vim.fn.strcharpart(truncated, 0, vim.fn.strchars(truncated) - 1)
     end
-    return truncated .. '…'
+    -- truncated..'…' is only width-1 wide -- pad it back out to the full
+    -- width like the untruncated branch below does, otherwise the next
+    -- column's text starts one cell early and runs straight into the
+    -- ellipsis with no gap between them.
+    local result = truncated .. '…'
+    return result .. string.rep(' ', width - vim.fn.strdisplaywidth(result))
   end
   return s .. string.rep(' ', width - dispw)
 end
