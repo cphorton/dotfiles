@@ -516,6 +516,27 @@ function M.reevaluate()
   end, 10000)
 end
 
+-- Visual Studio's QuickWatch hides an array's own inherited properties
+-- (Length, Rank, etc.) by default under an array node, showing only its
+-- indexed elements -- a client-side display filter (VS calls the
+-- unfiltered version "Raw View"), not something the debug protocol
+-- itself distinguishes: dncdbg's own `variables` response for an array
+-- mixes indexed elements and properties together in one flat list.
+-- Replicated the same way, filtering to names shaped like "[0]" or (for
+-- multi-dimensional arrays) "[0, 1]".
+local function is_array_type(var)
+  return type(var.type) == 'string' and var.type:match('%[%]$') ~= nil
+end
+
+local function filter_array_children(var, children)
+  if not is_array_type(var) then
+    return children
+  end
+  return vim.tbl_filter(function(child)
+    return child.name and child.name:match('^%[[%d, ]+%]$') ~= nil
+  end, children)
+end
+
 function M.add_watch()
   local expr = current_expr()
   if not expr or expr == '' then
@@ -622,6 +643,14 @@ function M.open(prefill)
   local spec = vim.tbl_extend('force', entity.variable.tree_spec, {
     render_parent = render_row,
     render_child = render_row,
+    get_children = function(var)
+      return filter_array_children(var, entity.variable.get_children(var))
+    end,
+    fetch_children = function(var, cb)
+      entity.variable.fetch_children(var, function(children)
+        cb(filter_array_children(var, children))
+      end)
+    end,
   })
   state.tree = ui.new_tree(spec)
 
