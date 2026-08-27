@@ -22,7 +22,7 @@
 -- NOTE: to actually run a debug session, drop a .vscode/launch.json (type
 -- "coreclr") into the target project -- nvim-dap loads it on-demand, this
 -- plugin doesn't read it itself. See the plugin README for an example.
-return {
+local config = {
     "kmiterror/dotnet-debug.nvim",
     dependencies = { "mfussenegger/nvim-dap", "rcarriga/nvim-dap-ui" },
     config = function()
@@ -40,3 +40,5 @@ return {
         })
     end,
 }
+
+return {}

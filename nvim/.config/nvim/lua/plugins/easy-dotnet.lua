@@ -38,8 +38,10 @@ return -- lazy.nvim
                 -- primitive/bool/char/string sort key. bin_path takes priority
                 -- over `engine` below (which is otherwise ignored once set), per
                 -- easy-dotnet's own dotnet-client.lua initialize() call.
-                bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
-                engine = "dncdbg",
+                    --
+                --bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
+                --engine = "dncdbg",
+                engine = "sharpdbg"
             },
         })
 
