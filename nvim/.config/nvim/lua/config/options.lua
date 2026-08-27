@@ -1,6 +1,13 @@
 -- Remap space as leader key
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
+-- NOTE: this is a no-op. It sets a global variable named "nofsync", not the
+-- real 'fsync' option -- that would be vim.o.fsync = false (Lua doesn't
+-- translate ":set nofsync" into vim.g.nofsync the way vimscript did). The
+-- 'fsync' option is currently on (default) in this build either way. Left
+-- as-is pending a decision on whether disabling fsync (faster writes, less
+-- durable against a crash/power-loss right after :w) is actually wanted --
+-- see plugin-audit-native-replacements.md.
 vim.g.nofsync = true
 
 

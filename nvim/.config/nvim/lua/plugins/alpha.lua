@@ -1,4 +1,8 @@
-    
+-- Soft-disabled: config kept below (readable, re-enablable) but this file
+-- returns {} instead of the real spec, so lazy.nvim never installs/loads it.
+-- snacks.nvim's own dashboard (see snacks.lua, dashboard.enabled = true, and
+-- init.lua's require("snacks.dashboard")) is the dashboard actually in use.
+-- Same idiom used in dotnet-debug.lua and debugmaster.lua.
 local config = {
     {
         "goolord/alpha-nvim",

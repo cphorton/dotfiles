@@ -22,6 +22,12 @@
 -- NOTE: to actually run a debug session, drop a .vscode/launch.json (type
 -- "coreclr") into the target project -- nvim-dap loads it on-demand, this
 -- plugin doesn't read it itself. See the plugin README for an example.
+--
+-- Soft-disabled: config kept below (readable, re-enablable) but this file
+-- returns {} instead of the real spec, so lazy.nvim never installs/loads it.
+-- easy-dotnet.nvim's own debugging (auto_register_dap, see easy-dotnet.lua)
+-- won out over testing this as an alternative. Same idiom used in alpha.lua
+-- and debugmaster.lua.
 local config = {
     "kmiterror/dotnet-debug.nvim",
     dependencies = { "mfussenegger/nvim-dap", "rcarriga/nvim-dap-ui" },

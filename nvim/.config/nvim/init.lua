@@ -14,6 +14,13 @@ vim.api.nvim_create_autocmd("User", {
 })
 
 
+-- Only "lua" needs an explicit vim.lsp.enable() call here. C# LSP settings
+-- live in lsp/easy_dotnet.lua but are picked up differently: Neovim
+-- auto-populates vim.lsp.config[name] from any lsp/<name>.lua file on the
+-- runtimepath regardless of vim.lsp.enable, and easy-dotnet.nvim's own
+-- roslyn/lsp.lua reads vim.lsp.config[constants.lsp_client_name] directly
+-- (lsp_client_name == "easy_dotnet", matching the filename) when it sets up
+-- the Roslyn client itself -- so it's live without ever being "enabled" here.
 vim.lsp.enable({
   -- lua
   "lua",
