@@ -1,41 +1,41 @@
-local map = vim.api.nvim_set_keymap
-local opts = {noremap = true, silent = true}
+-- Global editor keymaps. Plugin-specific keymaps live next to their plugin
+-- spec instead (e.g. lua/plugins/dap.lua's `keys = {}`) so lazy.nvim can
+-- lazy-load on first use -- see lua/plugins/dap.lua for that convention.
+local opts = { silent = true }
 
-local get_opts = function(desc_text)
-    return {noremap = true, silent = true, desc = desc_text}
+local function desc(text)
+    return { silent = true, desc = text }
 end
 
 --Stamp
-map("n", "S", [["_diwP]], get_opts("(S)tamp"))
+vim.keymap.set("n", "S", [["_diwP]], desc("(S)tamp"))
 
---home moves to the beginning 
-map('i', '<HOME>', '<esc>I', get_opts("Home to first word"))
+--home moves to the beginning
+vim.keymap.set("i", "<Home>", "<Esc>I", desc("Home to first word"))
 
-map("n", "<C-d>", "<C-d>zz", opts) --zz recentres after the page down
-map("n", "<C-u>", "<C-u>zz", opts) --zz recentres after the page up
-map("n", "n", "nzzzv", opts) --zz recentres after the page up
-map("n", "N", "Nzzzv", opts) --zz recentres after the page up
+vim.keymap.set("n", "<C-d>", "<C-d>zz", opts) --zz recentres after the page down
+vim.keymap.set("n", "<C-u>", "<C-u>zz", opts) --zz recentres after the page up
+vim.keymap.set("n", "n", "nzzzv", opts) --zz recentres after search next
+vim.keymap.set("n", "N", "Nzzzv", opts) --zz recentres after search prev
 
 -- Better window navigation
-map("n", "<C-h>", "<C-w>h", opts)
-map("n", "<C-j>", "<C-w>j", opts)
-map("n", "<C-k>", "<C-w>k", opts)
-map("n", "<C-l>", "<C-w>l", opts)
+vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
+vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
+vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
+vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
 
 -- Resize with arrows
-map("n", "<C-Up>", ":resize -2<CR>", opts)
-map("n", "<C-Down>", ":resize +2<CR>", opts)
-map("n", "<C-Left>", ":vertical resize -2<CR>", opts)
-map("n", "<C-Right>", ":vertical resize +2<CR>", opts)
-
+vim.keymap.set("n", "<C-Up>", "<Cmd>resize -2<CR>", opts)
+vim.keymap.set("n", "<C-Down>", "<Cmd>resize +2<CR>", opts)
+vim.keymap.set("n", "<C-Left>", "<Cmd>vertical resize -2<CR>", opts)
+vim.keymap.set("n", "<C-Right>", "<Cmd>vertical resize +2<CR>", opts)
 
 --code
-map("n", "<leader>cr", ":lua vim.lsp.buf.rename()<CR>", get_opts("(r)ename"))
-map("n", "<leader>ca", ":lua require('tiny-code-action').code_action()<CR>", get_opts("(a)ctions"))
---map("n", "<leader>ca", ":lua vim.lsp.buf.code_action()<CR>", get_opts("(a)ctions"))
-map("n", "<leader>ch", ":lua vim.lsp.buf.hover()<CR>", get_opts("(h)over"))
-map("n", "<leader>cf", ":lua vim.lsp.buf.format()<CR>", get_opts("(f)ormat"))
-map("n", "<leader>cd", ":lua vim.diagnostic.open_float()<CR>", get_opts("(d)iagnostics"))
-map("n", "<leader>cl", ":lua vim.lsp.codelens.run()<CR>", get_opts("Run Code(l)ens"))
-map("n", "<A-Down>", ":lua vim.diagnostic.goto_next()<CR>", get_opts("Next Diagnostic"))
-map("n", "<A-Up>", ":lua vim.diagnostic.goto_prev()<CR>", get_opts("Previous Diagnostic"))
+vim.keymap.set("n", "<leader>cr", function() vim.lsp.buf.rename() end, desc("(r)ename"))
+vim.keymap.set("n", "<leader>ca", function() require("tiny-code-action").code_action() end, desc("(a)ctions"))
+vim.keymap.set("n", "<leader>ch", function() vim.lsp.buf.hover() end, desc("(h)over"))
+vim.keymap.set("n", "<leader>cf", function() vim.lsp.buf.format() end, desc("(f)ormat"))
+vim.keymap.set("n", "<leader>cd", function() vim.diagnostic.open_float() end, desc("(d)iagnostics"))
+vim.keymap.set("n", "<leader>cl", function() vim.lsp.codelens.run() end, desc("Run Code(l)ens"))
+vim.keymap.set("n", "<A-Down>", function() vim.diagnostic.goto_next() end, desc("Next Diagnostic"))
+vim.keymap.set("n", "<A-Up>", function() vim.diagnostic.goto_prev() end, desc("Previous Diagnostic"))
