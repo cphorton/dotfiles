@@ -39,13 +39,17 @@ return -- lazy.nvim
                 -- over `engine` below (which is otherwise ignored once set), per
                 -- easy-dotnet's own dotnet-client.lua initialize() call.
                 --
-                -- Currently experimenting with easy-dotnet's built-in "sharpdbg"
-                -- engine instead (with an eye towards contributing upstream to it),
-                -- rather than falling back to dncdbg -- an active choice, not a
-                -- regression. Re-enable the dncdbg build above if sharpdbg doesn't
+                -- Currently experimenting with our own local build of sharpdbg
+                -- (an alternative debug engine easy-dotnet.nvim supports
+                -- natively) instead, with an eye towards contributing upstream
+                -- to it -- an active choice, not a regression. engine =
+                -- "sharpdbg" below is kept only as a label for what bin_path
+                -- actually points at (it's otherwise ignored once bin_path is
+                -- set). Re-enable the dncdbg build above if sharpdbg doesn't
                 -- pan out.
                 --bin_path = vim.fn.expand("~/Development/dncdbg/bin/dncdbg"),
                 --engine = "dncdbg",
+                bin_path = vim.fn.expand("~/Development/sharpdbg/artifacts/bin/SharpDbg.Cli/debug/SharpDbg.Cli"),
                 engine = "sharpdbg"
             },
         })
