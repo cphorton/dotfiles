@@ -37,6 +37,71 @@ return {
                     { text = sign[1], texthl = sign[2] or "DiagnosticInfo", linehl = sign[3], numhl = sign[3] }
                 )
             end
+
+            -- Surface Kestrel's startup "Now listening on: <url>" line(s) as
+            -- a notification. When a debug adapter sends a runInTerminal
+            -- reverse-request (as easy-dotnet's "attach" config does via its
+            -- `console` option), nvim-dap core (session.lua:run_in_terminal)
+            -- ALWAYS spawns the debuggee via genuine termopen/jobstart(term
+            -- = true) into a buffer named "[dap-terminal] <config.name>" --
+            -- this is nvim-dap's own default (terminal_win_cmd = 'belowright
+            -- new'), independent of dap-ui: dap-ui only overrides which
+            -- window/buffer object gets reused for it
+            -- (dap.defaults.fallback.terminal_win_cmd), the actual spawning
+            -- and buffer naming happens in nvim-dap core either way. So
+            -- watch for a genuine TermOpen on that name pattern -- no
+            -- dependency on dap-ui being loaded, and (unlike easy-dotnet's
+            -- own separate "term://" managed-terminal buffer, which stays
+            -- unloaded until manually displayed) this is a real terminal
+            -- channel, so nvim_buf_attach's on_lines fires reliably for it.
+            --
+            -- nvim-dap pools/reuses these terminal buffers across separate
+            -- runInTerminal requests (session.lua terminals.acquire/release)
+            -- and still calls termopen() again on a reused buffer -- which
+            -- can refire TermOpen for the same bufnr. Dedup both the attach
+            -- itself (attached_bufs) and the notified URLs (per-bufnr, not
+            -- global) so a stray double-attach on one run can't double
+            -- notify, while a genuinely new run (new bufnr) still notifies.
+            local attached_bufs = {}
+
+            local function watch_dap_terminal_for_listening_url(bufnr)
+                if attached_bufs[bufnr] then return end
+                attached_bufs[bufnr] = true
+                local seen = {}
+                local function scan(first, last)
+                    for _, line in ipairs(vim.api.nvim_buf_get_lines(bufnr, first, last, false)) do
+                        local url = line:match("Now listening on:%s*(%S+)")
+                        if url and not seen[url] then
+                            seen[url] = true
+                            vim.notify("Listening on " .. url, vim.log.levels.INFO, { title = "dotnet" })
+                        end
+                    end
+                end
+                scan(0, -1)
+                vim.api.nvim_buf_attach(bufnr, false, {
+                    on_lines = function(_, _, _, first, last) scan(first, last) end,
+                    on_detach = function() attached_bufs[bufnr] = nil end,
+                })
+            end
+
+            -- The rename to "[dap-terminal] ..." happens right AFTER
+            -- termopen() returns (session.lua run_in_terminal), which is
+            -- after TermOpen has already fired -- so the name check has to
+            -- be deferred a tick via vim.schedule, otherwise it always sees
+            -- the buffer's still-default "term://..." name and never
+            -- matches.
+            vim.api.nvim_create_autocmd("TermOpen", {
+                pattern = "*",
+                desc = "Notify on ASP.NET Core Kestrel startup URLs",
+                callback = function(args)
+                    local bufnr = args.buf
+                    vim.schedule(function()
+                        if not vim.api.nvim_buf_is_valid(bufnr) then return end
+                        if not vim.api.nvim_buf_get_name(bufnr):match("%[dap%-terminal%]") then return end
+                        watch_dap_terminal_for_listening_url(bufnr)
+                    end)
+                end,
+            })
         end,
 
         keys = {
