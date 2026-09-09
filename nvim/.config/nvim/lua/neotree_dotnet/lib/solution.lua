@@ -237,12 +237,33 @@ local function build_dependencies_node(project, cpm_versions)
   }
 end
 
+---@param dir string absolute directory to check
+---@return boolean
+local function has_own_csproj(dir)
+  local handle = uv.fs_scandir(dir)
+  if not handle then
+    return false
+  end
+  while true do
+    local name, ftype = uv.fs_scandir_next(handle)
+    if not name then
+      return false
+    end
+    if ftype == "file" and name:match("%.csproj$") then
+      return true
+    end
+  end
+end
+
 --- Walks a project's directory for .cs files, skipping bin/obj/hidden dirs.
 --- SDK-style csproj implicitly globs every .cs file under the project directory,
---- so this approximates it without parsing <Compile Remove> items. A project
---- whose directory contains another project's files (rare, but legal) will
---- double-list those files -- fine for a first pass, worth tightening later
---- by stopping descent at any directory containing its own .csproj.
+--- so this approximates it without parsing <Compile Remove> items. Descent
+--- stops at any subdirectory that has its own .csproj -- that's a nested
+--- project's root, and its files are already covered by that project's own
+--- node in the solution tree. Without this boundary, a project whose
+--- directory contains another project (rare, but legal) would double-list
+--- those files under both trees with the same node id, which neo-tree's
+--- underlying nui.nvim tree rejects as a duplicate.
 ---@param dir string absolute directory to scan
 ---@return neotree_dotnet.Node[]
 local function scan_cs_files(dir)
@@ -258,7 +279,7 @@ local function scan_cs_files(dir)
     end
     local abs = vim.fs.joinpath(dir, name)
     if ftype == "directory" then
-      if name ~= "bin" and name ~= "obj" and name:sub(1, 1) ~= "." then
+      if name ~= "bin" and name ~= "obj" and name:sub(1, 1) ~= "." and not has_own_csproj(abs) then
         local children = scan_cs_files(abs)
         if #children > 0 then
           table.insert(nodes, { id = abs, name = name, path = abs, type = "directory", children = children })
