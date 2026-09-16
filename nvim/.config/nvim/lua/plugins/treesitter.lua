@@ -25,22 +25,32 @@ return {
       -- is archived. Re-register the same directive wrapped in pcall: on the rare
       -- transient failure we just skip injecting a language for that one code fence
       -- instead of crashing highlighting for the whole buffer.
-      local injection_language_aliases = { ex = "elixir", pl = "perl", sh = "bash", uxn = "uxntal", ts = "typescript" }
+      local injection_language_aliases = { ex = "elixir", pl = "perl", sh = "bash", uxn = "uxntal", ts = "typescript", cs = "c_sharp", csharp = "c_sharp"}
       local function safe_get_parser_from_info_string(injection_alias)
-        local match = vim.filetype.match({ filename = "a." .. injection_alias })
-        return match or injection_language_aliases[injection_alias] or injection_alias
+        return injection_language_aliases[injection_alias]
+          or vim.filetype.match({ filename = "a." .. injection_alias })
+          or injection_alias
       end
-
-      vim.treesitter.query.add_directive("set-lang-from-info-string!", function(match, _, bufnr, pred, metadata)
-        pcall(function()
-          local capture_id = pred[2]
-          local node = match[capture_id]
-          if not node then
-            return
-          end
-          local injection_alias = vim.treesitter.get_node_text(node, bufnr):lower()
-          metadata["injection.language"] = safe_get_parser_from_info_string(injection_alias)
-        end)
-      end, { force = true, all = false })
+        vim.treesitter.query.add_directive("set-lang-from-info-string!", function(match, _, bufnr, pred, metadata)
+  pcall(function()
+    local capture_id = pred[2]
+    local node = match[capture_id]
+    if not node then
+      return
     end
+    -- Neovim 0.12 can hand back a list of nodes for a capture instead of a
+    -- single TSNode; unwrap it so get_node_text has a real node to call
+    -- :range() on.
+    if type(node) == "table" then
+      node = node[1]
+    end
+    if not node then
+      return
+    end
+    local injection_alias = vim.treesitter.get_node_text(node, bufnr):lower()
+    metadata["injection.language"] = safe_get_parser_from_info_string(injection_alias)
+  end)
+end, { force = true, all = false })
+
+          end
  }
